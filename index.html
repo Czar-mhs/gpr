@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MHS+ GPR">
+<meta name="theme-color" content="#1B2A3A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>MHS+ GPR Reports</title>
+<style>
+:root{
+  --navy:#1B2A3A; --navy2:#253a50; --amber:#C8902E; --bg:#E8EBED; --paper:#fff; --ink:#1E2328; --mute:#5F6973; --line:#D2D8DD;
+  --ok:#2E7D4F; --warn:#BF8014; --bad:#B3261E;
+  --font:"Avenir Next","Avenir","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:290px 1fr;grid-template-rows:auto 1fr;height:100vh;height:100dvh}
+header{grid-column:1/-1;background:var(--navy);color:#fff;display:flex;align-items:center;gap:16px;
+  padding:calc(env(safe-area-inset-top) + 10px) 20px 10px;border-bottom:3px solid var(--amber)}
+header .brand{font-weight:600;letter-spacing:.2px}
+header .rn{font-variant-numeric:tabular-nums;font-size:22px;font-weight:600}
+header .rn small{font-size:14px;font-weight:500;opacity:.7;margin-left:8px}
+header .sp{flex:1}
+header .save{font-size:13px;opacity:.7}
+.btn{border:0;border-radius:8px;padding:11px 16px;min-height:44px;font-weight:600;cursor:pointer;background:#fff;color:var(--navy);border:1px solid var(--line)}
+.btn.primary{background:var(--amber);color:#1b1407;border-color:var(--amber)}
+.btn.dark{background:var(--navy2);color:#fff;border-color:#35506b}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--navy);padding-left:8px;padding-right:8px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.nav:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+aside{background:var(--paper);border-right:1px solid var(--line);overflow:auto;padding:14px 12px calc(env(safe-area-inset-bottom) + 14px)}
+.nav{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:11px 12px;min-height:44px;cursor:pointer;color:var(--ink)}
+.nav.on{background:#EEF1F4;font-weight:600;box-shadow:inset 3px 0 0 var(--amber)}
+.group{font-size:13px;color:var(--mute);margin:18px 12px 6px;font-weight:600}
+.loc{display:grid;grid-template-columns:6px 1fr;gap:10px;align-items:stretch}
+.loc .bar{border-radius:3px;background:#B9C0C6}
+.loc .bar.clear{background:var(--ok)} .loc .bar.restricted{background:var(--warn)} .loc .bar.notfeasible{background:var(--bad)}
+.loc .t{font-weight:600} .loc .m{font-size:13px;font-weight:500;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+main{overflow:auto;padding:24px 28px calc(env(safe-area-inset-bottom) + 40px)}
+.sheet{max-width:920px}
+h1{font-size:26px;margin:0 0 4px;font-weight:600;color:var(--navy)}
+.lead{color:var(--mute);margin:0 0 22px;max-width:62ch;line-height:1.45}
+h2{font-size:17px;margin:28px 0 12px;color:var(--navy);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+.full{grid-column:1/-1}
+label{display:block;font-size:14px;font-weight:600;color:#39434d;margin-bottom:6px}
+.hint{font-weight:500;color:var(--mute);font-size:13px}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;padding:11px 12px;min-height:44px}
+textarea{min-height:110px;line-height:1.45;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.readout{font-variant-numeric:tabular-nums;font-size:14px;color:var(--navy);background:#EEF1F4;border-radius:6px;padding:4px 8px;margin-top:6px;display:inline-block}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{min-height:52px;border-radius:8px;border:2px solid var(--line);background:#fff;font-weight:600;cursor:pointer;padding:6px}
+.seg button.on.clear{border-color:var(--ok);background:#E6F2EA;color:var(--ok)}
+.seg button.on.restricted{border-color:var(--warn);background:#FBF1DD;color:#8a5c0c}
+.seg button.on.notfeasible{border-color:var(--bad);background:#F8E3E1;color:var(--bad)}
+.img{border:1px dashed #AEB7BF;border-radius:10px;background:#F7F8F9;min-height:150px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.img img{max-width:100%;max-height:260px;display:block}
+.img .ph{color:var(--mute);font-size:14px;text-align:center;padding:16px}
+.img input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.img .x{position:absolute;top:8px;right:8px;z-index:2;background:#fff;border:1px solid var(--line);border-radius:6px;min-height:36px;padding:4px 10px;cursor:pointer}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.ai{display:flex;gap:10px;align-items:center;margin:8px 0}
+.note{font-size:13px;color:var(--mute);line-height:1.4}
+.checks{background:#fff;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:12px 16px;margin:14px 0}
+.checks ul{margin:6px 0 0;padding-left:20px} .checks li{margin:3px 0}
+.ok{border-left-color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;z-index:9;max-width:90vw}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s .8s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}aside{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}header .brand,header .save{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="brand">MHS+ GPR Reports</div>
+      <div class="rn" id="hdrNo"></div>
+    </div>
+    <div class="sp"></div>
+    <span class="save" id="saveState"></span>
+    <button class="btn dark" id="btnPdf">Create PDF</button>
+  </header>
+  <aside id="nav"></aside>
+  <main><div class="sheet" id="view"></div></main>
+</div>
+<script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
+<script src="report.js"></script>
+<script>
+/* ================= State ================= */
+const DEFAULT_COMPANY = {
+  name:'MHS+ Project Management Services', address:'Dubai Investment Park, Dubai, UAE', website:'mhs-gpr.com', logo:'',
+  preparedBy:'Eng. Mohammed Saud', reviewedBy:'Eng. Mohammed', approvedBy:'Eng. Mohammed Hussain',
+  methodology:'The investigation was carried out using a Proceq GP8000 stepped-frequency continuous-wave ground penetrating radar. The instrument transmits broadband electromagnetic energy into the concrete and records reflections from interfaces with differing electrical properties, such as steel reinforcement, conduits, voids and the slab underside. Depth is calculated from two-way travel time using a wave velocity calibrated on site. Line scans and area (C-scan) grids were taken at each location, and detected reinforcement and services were marked on the concrete surface.',
+  limitations:'GPR detects contrasts in electrical properties and does not identify materials directly. Results depend on concrete condition, moisture content and reinforcement density; targets beneath dense steel may be masked, and objects closer together than the resolution limit may not be distinguished. Bar diameter, and whether a service is live or dead, cannot be determined by GPR. Depths are based on the calibrated wave velocity stated for each location and should be regarded as estimates. The absence of a detected target does not guarantee the absence of an object. Findings apply only to the areas scanned on the date of the investigation.'
+};
+const DEFAULT_INSTR = { model:'Proceq GP8000', serial:'', antenna:'Stepped-frequency, 0.2 to 4.0 GHz', calBy:'Betalink Instrumentation & Calibration Services', certNo:'', calDate:'', calDue:'', certImage:'' };
+const today = () => new Date().toISOString().slice(0,10);
+const newLoc = (n) => ({ uid:Math.random().toString(36).slice(2,9), id:'L-'+String(n).padStart(2,'0'), description:'', scanType:'', er:'', erMethod:'',
+  orientation:'', spacing:'', cover:'', bottom:'', targets:'', thickness:'', anomalies:'', conclusion:'', status:'', result:'', photo:'', scan:'' });
+function blankJob(company){
+  return { job:{ reportNo:'', rev:'0', date:today(), project:'', location:'', client:'', clientRef:'', scanDate:today(), scope:'', siteMap:'', photos:[],
+      preparedBy:company.preparedBy, reviewedBy:company.reviewedBy, approvedBy:company.approvedBy, revNotes:'' },
+    instrument:{...DEFAULT_INSTR}, locations:[newLoc(1)], summary:'' };
+}
+let settings = JSON.parse(localStorage.getItem('gpr.settings')||'null') || { shortcut:'MHS GPR Draft', company:{...DEFAULT_COMPANY}, instrument:{...DEFAULT_INSTR} };
+if(!settings.shortcut) settings.shortcut='MHS GPR Draft';
+let S = null; let view = 'job'; let lastPrompt = '';
+
+/* ================= Storage (IndexedDB for images) ================= */
+const idb = new Promise((res,rej)=>{ const r=indexedDB.open('gpr',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+const dbGet = async k => { const d=await idb; return new Promise(r=>{ const q=d.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); };
+const dbSet = async (k,v) => { const d=await idb; return new Promise((r,j)=>{ const t=d.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=r; t.onerror=()=>j(t.error); }); };
+let saveTimer;
+function save(){ document.getElementById('saveState').textContent='Saving'; clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{ try{ await dbSet('current',S); document.getElementById('saveState').textContent='Saved on this iPad'; }catch(e){ document.getElementById('saveState').textContent='Not saved: storage full'; } },400); }
+const saveSettings = () => localStorage.setItem('gpr.settings', JSON.stringify(settings));
+
+/* ================= Helpers ================= */
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function get(path){ return path.split('.').reduce((o,k)=>o?.[k], path.startsWith('settings.')?{settings}:S); }
+function set(path,val){ const root=path.startsWith('settings.')?{settings}:S; const ks=path.split('.'); const last=ks.pop(); ks.reduce((o,k)=>o[k],root)[last]=val;
+  if(path.startsWith('settings.')) saveSettings(); else save(); }
+const fld = (path,label,o={}) => `<div class="${o.full?'full':''}"><label for="${path}">${label}${o.hint?` <span class="hint">${o.hint}</span>`:''}</label>${
+  o.area?`<textarea id="${path}" data-p="${path}" placeholder="${esc(o.ph||'')}" ${o.rows?`style="min-height:${o.rows*24}px"`:''}>${esc(get(path))}</textarea>`
+  :`<input id="${path}" data-p="${path}" type="${o.type||'text'}" ${o.mode?`inputmode="${o.mode}"`:''} placeholder="${esc(o.ph||'')}" value="${esc(get(path))}">`}${o.after||''}</div>`;
+const imgBox = (path,label,ph) => { const src=get(path); return `<div><label>${label}</label><div class="img">${src?`<img src="${src}" alt="${esc(label)}"><button class="x" data-clear="${path}">Remove</button>`:`<div class="ph">${ph}</div>`}<input type="file" accept="image/*" data-img="${path}" aria-label="${esc(label)}"></div></div>`; };
+function toast(msg,ms=2600){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); }
+function resizeImage(file,max=1600){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ const r=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*r); c.height=Math.round(im.height*r); const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.82)); }; im.onerror=rej; im.src=fr.result; }; fr.onerror=rej; fr.readAsDataURL(file); }); }
+const locByUid = uid => S.locations.find(l=>l.uid===uid);
+const STATUS_LABEL = {clear:'Clear to proceed',restricted:'With restrictions',notfeasible:'Not feasible'};
+
+/* ================= Rendering ================= */
+function renderNav(){
+  const n=(k,t)=>`<button class="nav ${view===k?'on':''}" data-go="${k}">${t}</button>`;
+  document.getElementById('nav').innerHTML =
+    n('job','Job details')+n('instrument','Equipment and calibration')+n('photos','Site images')+
+    `<div class="group">Scan locations</div>`+
+    S.locations.map((L,i)=>`<button class="nav ${view==='loc:'+L.uid?'on':''}" data-go="loc:${L.uid}"><div class="loc"><span class="bar ${L.status}"></span><span><div class="t">${esc(L.id||'Location '+(i+1))}</div><div class="m">${esc([L.spacing&&L.spacing+' c/c',L.cover&&'cover '+L.cover].filter(Boolean).join(', ')||L.description||'No findings yet')}</div></span></div></button>`).join('')+
+    `<button class="btn ghost" id="addLoc" style="margin:6px 4px">Add location</button>`+
+    `<div class="group">Report</div>`+n('summary','Summary and checks')+n('files','Job files')+n('settings','Company settings');
+  document.getElementById('hdrNo').innerHTML = `${esc(S.job.reportNo||'New report')}<small>Rev ${esc(S.job.rev)}</small>`;
+}
+function renderView(){
+  const el=document.getElementById('view'); let h='';
+  if(view==='job'){
+    h=`<h1>Job details</h1><p class="lead">Cover page and document control. Names default from company settings.</p>
+    <div class="grid">${fld('job.reportNo','Report no.',{ph:'MHS-206-2026'})}${fld('job.rev','Revision',{mode:'numeric'})}
+    ${fld('job.project','Project',{full:true,ph:'Coring in LG floor plant room for tank separation'})}
+    ${fld('job.location','Site location',{ph:'Jumeirah Village, Dubai'})}${fld('job.client','Client')}
+    ${fld('job.clientRef','Client reference',{hint:'optional'})}${fld('job.scanDate','Date of scanning',{type:'date'})}
+    ${fld('job.date','Date of issue',{type:'date'})}<div></div>
+    ${fld('job.preparedBy','Prepared by')}${fld('job.reviewedBy','Reviewed by')}${fld('job.approvedBy','Approved by')}${fld('job.revNotes','Revision notes',{hint:'optional'})}
+    ${fld('job.scope','Introduction and scope',{full:true,area:true,ph:'MHS+ was appointed by the client to locate reinforcement and embedded services at the locations shown, prior to coring...'})}
+    <div class="full">${imgBox('job.siteMap','Site location map or scan area plan','Tap to add a map or plan')}</div></div>`;
+  } else if(view==='instrument'){
+    h=`<h1>Equipment and calibration</h1><p class="lead">Carried into every new job from company settings. Update the certificate when the instrument is recalibrated.</p>
+    <div class="grid">${fld('instrument.model','Instrument')}${fld('instrument.serial','Serial number')}${fld('instrument.antenna','Antenna / frequency',{full:true})}
+    ${fld('instrument.calBy','Calibrated by',{full:true})}${fld('instrument.certNo','Certificate no.')}${fld('instrument.calDate','Calibration date',{type:'date'})}${fld('instrument.calDue','Valid until',{type:'date'})}<div></div>
+    <div class="full">${imgBox('instrument.certImage','Calibration certificate','Tap to add a photo or scan of the certificate')}</div></div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="instrDefault">Save as company default</button></div>`;
+  } else if(view==='photos'){
+    h=`<h1>Site images</h1><p class="lead">General site photos. Location photos and scan images go on each location page.</p>
+    <div class="photos">${S.job.photos.map((p,i)=>`<div><div class="img"><img src="${p.src}" alt="Site photo ${i+1}"><button class="x" data-delphoto="${i}">Remove</button></div><input style="margin-top:8px" data-p="job.photos.${i}.caption" placeholder="Caption" value="${esc(p.caption)}"></div>`).join('')}
+    <div><div class="img"><div class="ph">Tap to add photos</div><input type="file" accept="image/*" multiple id="addPhotos" aria-label="Add site photos"></div></div></div>`;
+  } else if(view.startsWith('loc:')){
+    const L=locByUid(view.slice(4)); const i=S.locations.indexOf(L); const p=`locations.${i}`;
+    const vel=gprVelocity(L.er);
+    h=`<h1>${esc(L.id||'Location')}</h1><p class="lead">Enter what you measured and concluded on site. The result text is drafted from these fields.</p>
+    <div class="grid">${fld(p+'.id','Location ID')}${fld(p+'.scanType','Scan type and area',{ph:'C-scan grid, 600 x 600 mm'})}
+    ${fld(p+'.description','Description',{full:true,ph:'LG plant room, proposed 150 mm core'})}
+    <h2 class="full" style="margin:10px 0 0">Measurements</h2>
+    ${fld(p+'.er','Dielectric constant (εr)',{mode:'decimal',ph:'7.0',after:`<span class="readout" id="velOut">${vel?`v = ${vel.toFixed(3)} m/ns`:'Enter εr to see wave velocity'}</span>`})}
+    ${fld(p+'.erMethod','Velocity method',{ph:'Hyperbola fit'})}
+    ${fld(p+'.orientation','Top reinforcement',{ph:'Two-way mesh'})}${fld(p+'.spacing','Top bar spacing',{ph:'150 mm'})}
+    ${fld(p+'.cover','Concrete cover',{ph:'40 to 48 mm'})}${fld(p+'.bottom','Bottom reinforcement',{hint:'if detected'})}
+    ${fld(p+'.targets','Other targets and depth',{ph:'Metallic conduit at approx. 110 mm, running N-S'})}${fld(p+'.thickness','Slab thickness',{hint:'if detected'})}
+    ${fld(p+'.anomalies','Anomalies',{full:true,ph:'None observed'})}
+    <h2 class="full" style="margin:10px 0 0">Images</h2>
+    ${imgBox(p+'.photo','Marked-up site photo','Tap to take or choose a photo')}${imgBox(p+'.scan','GPR scan image','Tap to add the GP8000 screenshot')}
+    <h2 class="full" style="margin:10px 0 0">Engineer's decision</h2>
+    <div class="full"><div class="seg" role="group" aria-label="Status">${Object.entries(STATUS_LABEL).map(([k,t])=>`<button class="${k} ${L.status===k?'on':''}" data-status="${k}" aria-pressed="${L.status===k}">${t}</button>`).join('')}</div></div>
+    ${fld(p+'.conclusion',"Engineer's conclusion",{full:true,area:true,rows:3,ph:'Core feasible at marked position, clear of bars and conduit.'})}
+    <div class="full"><label for="${p}.result">Result text <span class="hint">appears in the report</span></label>
+    <div class="ai"><button class="btn primary" data-draft="${L.uid}">Draft from fields</button><button class="btn" data-ai="${L.uid}">Improve with AI</button><button class="btn" data-paste="${L.uid}">Paste AI draft</button></div><p class="note" style="margin:0 0 8px">Draft from fields works offline. Improve with AI runs your "${esc(settings.shortcut)}" shortcut, then return here and tap Paste AI draft.</p>
+    <textarea id="${p}.result" data-p="${p}.result" style="min-height:170px">${esc(L.result)}</textarea></div></div>
+    <div class="row" style="margin-top:22px"><button class="btn" data-dup="${L.uid}">Duplicate location</button><button class="btn danger" data-del="${L.uid}">Delete location</button></div>`;
+  } else if(view==='summary'){
+    const issues=checkJob();
+    h=`<h1>Summary and checks</h1><p class="lead">Review the gaps below, draft the summary, then create the PDF.</p>
+    <div class="checks ${issues.length?'':'ok'}"><strong>${issues.length?issues.length+' item'+(issues.length>1?'s':'')+' to review':'Ready to issue'}</strong>${issues.length?`<ul>${issues.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>
+    <label for="summary">Executive summary</label>
+    <div class="ai"><button class="btn primary" data-draft="summary">Draft from fields</button><button class="btn" data-ai="summary">Improve with AI</button><button class="btn" data-paste="summary">Paste AI draft</button></div>
+    <textarea id="summary" data-p="summary" style="min-height:190px">${esc(S.summary)}</textarea>
+    <div class="row" style="margin-top:18px"><button class="btn dark" id="btnPdf2">Create PDF</button></div>`;
+  } else if(view==='files'){
+    h=`<h1>Job files</h1><p class="lead">The current job saves automatically on this iPad. Save a job file to keep a copy in Files, share it with the team, or reopen it later.</p>
+    <div class="row"><button class="btn dark" id="exportJob">Save job file</button>
+    <label class="btn" style="margin:0;display:inline-flex;align-items:center">Open job file<input type="file" accept=".json,application/json" id="importJob" hidden></label>
+    <button class="btn" id="newJob">Start new job</button><button class="btn" id="sampleJob">Load sample job</button></div>
+    <p class="note" style="margin-top:14px">Starting a new job clears the current one from this iPad. Save a job file first if you need it.</p>`;
+  } else if(view==='settings'){
+    h=`<h1>Company settings</h1><p class="lead">Defaults used on every new report. Stored on this iPad only.</p>
+    <div class="grid">${fld('settings.company.name','Company name',{full:true})}${fld('settings.company.address','Address')}${fld('settings.company.website','Website')}
+    ${fld('settings.company.preparedBy','Prepared by')}${fld('settings.company.reviewedBy','Reviewed by')}${fld('settings.company.approvedBy','Approved by')}<div></div>
+    <div class="full">${imgBox('settings.company.logo','Company logo','Tap to add a logo (shown on the cover)')}</div>
+    ${fld('settings.company.methodology','Standard methodology text',{full:true,area:true,rows:7})}
+    ${fld('settings.company.limitations','Standard limitations text',{full:true,area:true,rows:7})}
+    <h2 class="full" style="margin:10px 0 0">AI drafting through Shortcuts</h2>
+    ${fld('settings.shortcut','Shortcut name',{full:true,hint:'must match the name in the Shortcuts app exactly'})}
+    </div>
+    <p class="note">The app works fully offline and has no running costs. "Improve with AI" hands the text to the Shortcuts app, which uses the model you choose there. Client names are not sent.</p>`;
+  }
+  el.innerHTML=h; renderNav();
+}
+function render(){ renderNav(); renderView(); document.querySelector('main').scrollTop=0; }
+
+/* ================= Checks ================= */
+function checkJob(){
+  const x=[], J=S.job;
+  if(!J.reportNo) x.push('Report number is missing'); if(!J.project) x.push('Project is missing'); if(!J.client) x.push('Client is missing');
+  if(!J.scope) x.push('Introduction and scope is empty');
+  if(!S.instrument.certNo || !S.instrument.calDue) x.push('Calibration certificate number or validity date is missing');
+  else if(S.instrument.calDue < (J.scanDate||today())) x.push('Calibration had expired on the scan date');
+  S.locations.forEach((L,i)=>{ const n=L.id||'Location '+(i+1);
+    if(!L.er) x.push(`${n}: dielectric constant not recorded (depths cannot be verified)`);
+    if(!L.status) x.push(`${n}: engineer's decision not set`);
+    if(!L.result) x.push(`${n}: result text is empty`);
+    if(!L.scan) x.push(`${n}: no GPR scan image`);
+    if(!L.photo) x.push(`${n}: no marked-up site photo`);
+  });
+  if(!S.summary) x.push('Executive summary is empty');
+  return x;
+}
+
+/* ================= Offline drafting (no API, no cost) ================= */
+const T = x => String(x??'').trim();
+const lc = x => { x=T(x); return /^[A-Z]{2}/.test(x)||/^[A-Z]-?\d/.test(x) ? x : x.charAt(0).toLowerCase()+x.slice(1); };
+const dot = x => { x=T(x); return x && !/[.!?]$/.test(x) ? x+'.' : x; };
+const isNone = x => /^(none|nil|no|n\/a|na|-|not (observed|detected|resolved|found))\b/i.test(T(x));
+const ask = what => `[ENGINEER TO CONFIRM: ${what}]`;
+function draftLocation(L){
+  const out=[]; const where=T(L.description)?` at ${lc(L.description).replace(/\.$/,'')}`:'';
+  out.push(`GPR scanning was carried out${where}${T(L.scanType)?`, using a ${T(L.scanType).replace(/\.$/,'')}`:''}.`);
+  if(T(L.spacing)||T(L.cover)||T(L.orientation)){
+    let t=`Top reinforcement${T(L.orientation)?` (${lc(L.orientation)})`:''} was detected`;
+    t+= T(L.spacing)?` at approximately ${T(L.spacing)} centres`:` (spacing ${ask('bar spacing')})`;
+    t+= T(L.cover)?`, with concrete cover of ${T(L.cover)}.`:`, with concrete cover of ${ask('cover depth')}.`;
+    out.push(t);
+  } else out.push(`Top reinforcement: ${ask('orientation, spacing and cover')}.`);
+  if(T(L.bottom)) out.push(isNone(L.bottom)?'Bottom reinforcement was not resolved.':`Bottom reinforcement was detected (${lc(L.bottom)}).`);
+  if(T(L.targets)) out.push(isNone(L.targets)?'No other embedded targets were detected.':`An additional target was identified: ${lc(dot(L.targets))}`);
+  if(T(L.thickness)) out.push(`The slab underside was observed at ${lc(L.thickness)}.`);
+  const v=gprVelocity(L.er);
+  out.push(v?`Depths are based on a dielectric constant of ${T(L.er)} (wave velocity ${v.toFixed(3)} m/ns)${T(L.erMethod)?`, determined by ${lc(L.erMethod)}`:''}.`
+            :`Depths are based on a dielectric constant of ${ask('εr and calibration method')}.`);
+  if(T(L.anomalies)) out.push(isNone(L.anomalies)?'No anomalies were observed.':`Anomalies noted: ${lc(dot(L.anomalies))}`);
+  if(T(L.conclusion)) out.push(dot(L.conclusion));
+  else out.push({clear:'The location is considered clear to proceed at the marked position.',restricted:`Works may proceed subject to the following restrictions: ${ask('restrictions')}.`,notfeasible:'Works are not considered feasible at the marked position.'}[L.status]||`Conclusion: ${ask("engineer's decision")}.`);
+  return out.join(' ');
+}
+function draftSummary(){
+  const Ls=S.locations, n=Ls.length, id=(L,i)=>T(L.id)||'Location '+(i+1);
+  const out=[`GPR scanning was carried out at ${n} location${n>1?'s':''}${T(S.job.project)?` for ${lc(S.job.project)}`:''}${T(S.job.location)?` at ${T(S.job.location)}`:''} to locate reinforcement and embedded services.`];
+  const groups={clear:[],restricted:[],notfeasible:[],'':[]}; Ls.forEach((L,i)=>groups[L.status||''].push(id(L,i)));
+  const say=(arr,txt)=>arr.length&&out.push(`${arr.join(', ')} ${arr.length>1?'were':'was'} assessed as ${txt}.`);
+  say(groups.clear,'clear to proceed at the marked position'+(groups.clear.length>1?'s':''));
+  say(groups.restricted,'able to proceed subject to restrictions');
+  say(groups.notfeasible,'not feasible at the marked position'+(groups.notfeasible.length>1?'s':''));
+  if(groups[''].length) out.push(`The decision for ${groups[''].join(', ')} is ${ask('status')}.`);
+  const tg=Ls.map((L,i)=>T(L.targets)&&!isNone(L.targets)?`${lc(T(L.targets).replace(/\.$/,''))} (${id(L,i)})`:'').filter(Boolean);
+  if(tg.length) out.push(`Embedded services identified include ${tg.join('; ')}.`);
+  out.push('Detailed findings are given on each location page. Readers should refer to the limitations section of this report.');
+  return out.join(' ');
+}
+function draft(target){
+  if(target==='summary'){ S.summary=draftSummary(); save(); document.getElementById('summary').value=S.summary; }
+  else { const L=locByUid(target); L.result=draftLocation(L); save(); const ta=document.querySelector(`[data-p="locations.${S.locations.indexOf(L)}.result"]`); if(ta) ta.value=L.result; }
+  toast('Draft ready. Review and edit before issuing.');
+}
+
+const RULES = `You are editing text for a GPR (ground penetrating radar) concrete scanning report by MHS+ Project Management Services, Dubai.
+Rules: use ONLY the facts given below. Never add or change measurements, depths, targets or conclusions. Keep every [ENGINEER TO CONFIRM: ...] marker exactly as written. Formal, concise British engineering English, past tense, mm for dimensions. Return ONLY the finished paragraph: no heading, no bullets, no preamble, no quotation marks.`;
+function aiPrompt(t){
+  if(t==='summary'){
+    const facts=S.locations.map(L=>({...locFactsLite(L)}));
+    return `${RULES}\n\nTask: improve this executive summary (80 to 160 words).\n\nPROJECT: ${T(S.job.project)}\nSITE: ${T(S.job.location)}\nLOCATION FINDINGS: ${JSON.stringify(facts)}\n\nSTARTING DRAFT:\n${T(S.summary)||draftSummary()}`;
+  }
+  const L=locByUid(t);
+  return `${RULES}\n\nTask: improve this location result paragraph (60 to 130 words).\n\nFACTS: ${JSON.stringify(locFactsLite(L))}\n\nSTARTING DRAFT:\n${T(L.result)||draftLocation(L)}`;
+}
+function locFactsLite(L){ const v=gprVelocity(L.er); const o={location:L.id,description:L.description,scan:L.scanType,dielectric:L.er,velocity:v?v.toFixed(3)+' m/ns':'',velocity_method:L.erMethod,top_reinforcement:L.orientation,spacing:L.spacing,cover:L.cover,bottom_reinforcement:L.bottom,other_targets:L.targets,slab_thickness:L.thickness,anomalies:L.anomalies,decision:STATUS_LABEL[L.status]||'not set',engineer_conclusion:L.conclusion};
+  Object.keys(o).forEach(k=>{ if(!T(o[k])) delete o[k]; }); return o; }
+async function sendToShortcut(t){
+  const prompt=aiPrompt(t); lastPrompt=prompt;
+  try{ await navigator.clipboard.writeText(prompt); }catch{ return toast('Could not copy to the clipboard. Tap Improve with AI again.',4000); }
+  toast('Opening Shortcuts. When it finishes, come back and tap Paste AI draft.',4000);
+  setTimeout(()=>{ location.href='shortcuts://run-shortcut?name='+encodeURIComponent(settings.shortcut)+'&input=clipboard'; },350);
+}
+async function pasteDraft(t){
+  let txt=''; try{ txt=(await navigator.clipboard.readText()).trim(); }catch{ return toast('Allow Paste when iPad asks, then try again.',4000); }
+  if(!txt) return toast('The clipboard is empty. Run Improve with AI first.',4000);
+  if(txt===lastPrompt.trim()||txt.startsWith('You are editing text for a GPR')) return toast('The shortcut has not replaced the clipboard yet. Check it ran, then paste again.',5000);
+  txt=txt.replace(/^["“]|["”]$/g,'').trim();
+  const lost=(t==='summary'?S.summary:locByUid(t).result).match(/\[ENGINEER TO CONFIRM:[^\]]*\]/g)||[];
+  if(t==='summary'){ S.summary=txt; document.getElementById('summary').value=txt; }
+  else { const L=locByUid(t); L.result=txt; const ta=document.querySelector(`[data-p="locations.${S.locations.indexOf(L)}.result"]`); if(ta) ta.value=txt; }
+  save(); const dropped=lost.filter(m=>!txt.includes(m)).length;
+  toast(dropped?`AI draft pasted. Warning: ${dropped} "engineer to confirm" marker(s) were removed. Check the facts.`:'AI draft pasted. Review before issuing.',dropped?6000:3000);
+}
+const target_has_text = t => t==='summary' ? !!T(S.summary) : !!T(locByUid(t)?.result);
+/* ================= PDF ================= */
+async function makePdf(){
+  const issues=checkJob();
+  if(issues.length && !confirm(`${issues.length} item(s) still to review (see Summary and checks).\n\nCreate the PDF anyway?`)) return;
+  try{
+    const doc=buildReport({...S, company:settings.company}, window.jspdf.jsPDF);
+    const name=`${(S.job.reportNo||'GPR-Report').replace(/[^\w.-]+/g,'_')}_Rev${S.job.rev||0}.pdf`;
+    const blob=doc.output('blob'); const file=new File([blob],name,{type:'application/pdf'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(e){ if(e.name==='AbortError') return; } }
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
+    toast('PDF created: '+name);
+  }catch(e){ console.error(e); toast('PDF could not be created: '+e.message,5000); }
+}
+
+/* ================= Events ================= */
+document.addEventListener('input',e=>{ const p=e.target.dataset.p; if(!p) return; set(p,e.target.value);
+  if(/\.er$/.test(p)){ const v=gprVelocity(e.target.value); const o=document.getElementById('velOut'); if(o) o.textContent=v?`v = ${v.toFixed(3)} m/ns (1 ns two-way = ${(v*500).toFixed(0)} mm depth)`:'Enter εr to see wave velocity'; }
+  if(/^job\.(reportNo|rev)$|^locations\.\d+\.(id|spacing|cover|description)$/.test(p)) renderNav(); });
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.dataset.img && t.files[0]){ try{ set(t.dataset.img, await resizeImage(t.files[0])); renderView(); }catch{ toast('That image could not be read.'); } }
+  if(t.id==='addPhotos'){ for(const f of t.files){ try{ S.job.photos.push({src:await resizeImage(f),caption:''}); }catch{} } save(); renderView(); }
+  if(t.id==='importJob' && t.files[0]){ try{ const d=JSON.parse(await t.files[0].text()); if(!d.job||!d.locations) throw 0; S=d; save(); view='job'; render(); toast('Job opened'); }catch{ toast('That file is not an MHS+ GPR job file.'); } }
+});
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button,[data-go]'); if(!b) return;
+  if(b.dataset.go){ view=b.dataset.go; render(); return; }
+  if(b.id==='addLoc'){ const L=newLoc(S.locations.length+1); S.locations.push(L); save(); view='loc:'+L.uid; render(); return; }
+  if(b.dataset.clear){ set(b.dataset.clear,''); renderView(); return; }
+  if(b.dataset.delphoto){ S.job.photos.splice(+b.dataset.delphoto,1); save(); renderView(); return; }
+  if(b.dataset.status){ const L=locByUid(view.slice(4)); L.status=L.status===b.dataset.status?'':b.dataset.status; save(); renderView(); return; }
+  if(b.dataset.ai){ sendToShortcut(b.dataset.ai); return; }
+  if(b.dataset.paste){ pasteDraft(b.dataset.paste); return; }
+  if(b.dataset.draft){ if(target_has_text(b.dataset.draft) && !confirm('Replace the existing text with a fresh draft?')) return; draft(b.dataset.draft); return; }
+  if(b.dataset.dup){ const L=locByUid(b.dataset.dup); const c={...L,uid:Math.random().toString(36).slice(2,9),id:'L-'+String(S.locations.length+1).padStart(2,'0'),photo:'',scan:'',result:'',status:''}; S.locations.splice(S.locations.indexOf(L)+1,0,c); save(); view='loc:'+c.uid; render(); return; }
+  if(b.dataset.del){ if(S.locations.length===1) return toast('A report needs at least one location.'); if(!confirm('Delete this location and its images?')) return; S.locations=S.locations.filter(l=>l.uid!==b.dataset.del); save(); view='job'; render(); return; }
+  if(b.id==='btnPdf'||b.id==='btnPdf2'){ makePdf(); return; }
+  if(b.id==='instrDefault'){ const {certImage,...rest}=S.instrument; settings.instrument={...rest,certImage}; saveSettings(); toast('Saved as company default'); return; }
+  if(b.id==='exportJob'){ const name=`${(S.job.reportNo||'GPR-job').replace(/[^\w.-]+/g,'_')}.json`; const blob=new Blob([JSON.stringify(S)],{type:'application/json'}); const f=new File([blob],name,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f]}); return; }catch(err){ if(err.name==='AbortError') return; } }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); return; }
+  if(b.id==='newJob'){ if(!confirm('Start a new job? The current job will be cleared from this iPad.')) return; S=blankJob(settings.company); S.instrument={...DEFAULT_INSTR,...settings.instrument}; save(); view='job'; render(); return; }
+  if(b.id==='sampleJob'){ if(!confirm('Replace the current job with the sample?')) return; try{ S=await (await fetch('sample.json')).json(); save(); view='job'; render(); toast('Sample job loaded'); }catch{ toast('Sample could not be loaded.'); } return; }
+});
+
+/* ================= Boot ================= */
+(async()=>{
+  try{ S=await dbGet('current'); }catch{}
+  if(!S){ S=blankJob(settings.company); S.instrument={...DEFAULT_INSTR,...settings.instrument}; }
+  render(); document.getElementById('saveState').textContent='Saved on this iPad';
+  if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js');
+})();
+</script>
+</body>
+</html>
