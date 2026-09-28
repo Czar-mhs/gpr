@@ -10,7 +10,8 @@
   const v = (x) => (x == null ? '' : String(x).trim());
   const velocity = (er) => { const e = parseFloat(er); return e > 0 ? 0.2998 / Math.sqrt(e) : null; };
 
-  function buildReport(S, jsPDF) {
+  function buildReport(S, jsPDF, opts) {
+    opts = opts || {};
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const W = 210, H = 297, M = 18, CW = W - 2 * M;
     const J = S.job, C = S.company, I = S.instrument;
@@ -48,6 +49,53 @@
       } catch (e) { return 0; }
     };
     const caption = (t, x, yy, w) => text(doc.splitTextToSize(t, w), x + w / 2, yy, { size: 7.8, italic: true, color: GREY, align: 'center' });
+    const pill = (label, rgb, yy) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+      const lw = doc.getTextWidth(label) + 8;
+      doc.setFillColor(...rgb); doc.roundedRect(W - M - lw, yy - 5, lw, 7, 1.5, 1.5, 'F');
+      text(label, W - M - lw / 2, yy - 0.4, { size: 8.5, bold: true, color: [255, 255, 255], align: 'center' });
+    };
+    const kv4 = (rows) => {
+      const body = rows.filter(r => v(r[1]) || v(r[3])).map(r => [r[0], v(r[1]) || '-', r[2], v(r[3]) || '-']);
+      if (!body.length) return;
+      doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: 'grid', body,
+        styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.6, lineColor: LINE, lineWidth: 0.2, textColor: INK },
+        columnStyles: { 0: { cellWidth: 35, fontStyle: 'bold', fillColor: [238, 241, 244] }, 1: { cellWidth: CW / 2 - 35 },
+                        2: { cellWidth: 35, fontStyle: 'bold', fillColor: [238, 241, 244] } } });
+      y = doc.lastAutoTable.finalY + 3;
+    };
+    const topBars = (L) => [v(L.orientation), v(L.spacing) && L.spacing + ' c/c'].filter(Boolean).join(', ');
+    const erText = (L) => { const vel = velocity(L.er); return v(L.er) && (L.er + (vel ? ` (v = ${vel.toFixed(3)} m/ns)` : '')); };
+    function locCompact(L, i) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.6);
+      const res = v(L.result) ? doc.splitTextToSize(v(L.result), CW).length : 0;
+      const con = v(L.conclusion) ? doc.splitTextToSize("Engineer's conclusion: " + v(L.conclusion), CW).length : 0;
+      const hasImg = !!(L.photo || L.scan), IH = 50;
+      const est = 10 + 25 + (hasImg ? IH + 9 : 0) + (res + con) * 3.9 + 6;
+      if (y > 30) {
+        if (y + est > H - 20) newPage();
+        else { doc.setDrawColor(...AMBER); doc.setLineWidth(0.4); doc.line(M, y - 1, W - M, y - 1); y += 6; }
+      }
+      const st = STATUS[L.status || ''];
+      text(`Location ${v(L.id) || i + 1}`, M, y, { bold: true, size: 12, color: NAVY });
+      pill(st.label, st.rgb, y); y += 5;
+      if (v(L.description)) { text(doc.splitTextToSize(v(L.description), CW - 60)[0], M, y, { size: 8.8, color: GREY }); y += 4.5; }
+      kv4([['Scan type / area', L.scanType, 'Dielectric constant', erText(L)],
+           ['Top reinforcement', topBars(L), 'Concrete cover', L.cover],
+           ['Bottom reinforcement', L.bottom, 'Slab thickness', L.thickness],
+           ['Other targets', L.targets, 'Anomalies', L.anomalies]]);
+      if (hasImg) {
+        const cw = (CW - 6) / 2; let hmax = 0;
+        if (L.photo) hmax = Math.max(hmax, image(L.photo, M, y, cw, IH));
+        if (L.scan) hmax = Math.max(hmax, image(L.scan, M + cw + 6, y, cw, IH));
+        if (L.photo) caption('Marked-up site photo', M, y + hmax + 3.5, cw);
+        if (L.scan) caption('GPR scan image', M + cw + 6, y + hmax + 3.5, cw);
+        y += hmax + 9;
+      }
+      if (v(L.result)) para(L.result, { size: 8.6, after: 1.5 });
+      if (v(L.conclusion)) para("Engineer's conclusion: " + v(L.conclusion), { size: 8.6, bold: true, after: 2 });
+      y += 4;
+    }
 
     /* ---------- Cover ---------- */
     doc.setFillColor(...NAVY); doc.rect(0, 0, W, 92, 'F');
@@ -95,13 +143,12 @@
     }
 
     /* ---------- Locations ---------- */
-    S.locations.forEach((L, i) => {
+    if (opts.layout === 'compact') { newPage(); S.locations.forEach(locCompact); }
+    else S.locations.forEach((L, i) => {
       newPage();
       const st = STATUS[L.status || ''];
       text(`Location ${v(L.id) || i + 1}`, M, y, { bold: true, size: 14, color: NAVY });
-      doc.setFillColor(...st.rgb); const lw = doc.getTextWidth(st.label) * (8.5 / 9.5) + 8;
-      doc.roundedRect(W - M - lw - 2, y - 5, lw + 2, 7, 1.5, 1.5, 'F');
-      text(st.label, W - M - (lw + 2) / 2, y - 0.4, { size: 8.5, bold: true, color: [255, 255, 255], align: 'center' });
+      pill(st.label, st.rgb, y);
       y += 5; para(L.description, { size: 10, after: 2 });
       const vel = velocity(L.er);
       kv([['Scan type / area', L.scanType], ['Dielectric constant', v(L.er) && (L.er + (vel ? `   (v = ${vel.toFixed(3)} m/ns)` : ''))],
@@ -126,7 +173,7 @@
     if (v(S.summary)) para(S.summary);
     doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: 'grid',
       head: [['Loc.', 'Description', 'Top bars', 'Cover', 'Other targets', 'Status']],
-      body: S.locations.map((L, i) => [v(L.id) || String(i + 1), v(L.description), v(L.spacing), v(L.cover), v(L.targets) || '-', STATUS[L.status || ''].label]),
+      body: S.locations.map((L, i) => [v(L.id) || String(i + 1), v(L.description), v(L.spacing) || '-', v(L.cover) || '-', v(L.targets) || '-', STATUS[L.status || ''].label]),
       styles: { fontSize: 8, cellPadding: 2, lineColor: LINE, lineWidth: 0.2, textColor: INK, valign: 'top' },
       headStyles: { fillColor: NAVY, textColor: 255 },
       columnStyles: { 0: { cellWidth: 14 }, 2: { cellWidth: 22 }, 3: { cellWidth: 20 }, 5: { cellWidth: 30 } },
@@ -147,6 +194,13 @@
       doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, H - 13, W - M, H - 13);
       text(v(J.project), M, H - 8.5, { size: 7.5, color: GREY });
       text(`Page ${p} of ${n}`, W - M, H - 8.5, { size: 7.5, color: GREY, align: 'right' });
+    }
+    if (opts.draft) {
+      for (let p = 1; p <= n; p++) {
+        doc.setPage(p); doc.saveGraphicsState(); doc.setGState(new doc.GState({ opacity: 0.09 }));
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(110); doc.setTextColor(27, 42, 58);
+        doc.text('DRAFT', 52, 222, { angle: 45 }); doc.restoreGraphicsState();
+      }
     }
     doc.setProperties({ title: `${v(J.reportNo)} GPR Scanning Report`, author: v(C.name), subject: v(J.project) });
     return doc;

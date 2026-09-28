@@ -77,6 +77,35 @@ textarea{min-height:110px;line-height:1.45;resize:vertical}
 @keyframes s{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 @media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}aside{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}.grid{grid-template-columns:1fr}header .brand,header .save{display:none}}
+
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:#EEF1F4;color:var(--navy);vertical-align:middle;white-space:nowrap}
+.badge.draft{background:#FBF1DD;color:#8a5c0c}.badge.issued{background:#E6F2EA;color:var(--ok)}.badge.superseded{background:#ECEEF0;color:#6b747c}
+header .badge{margin-left:10px;font-size:12px}
+.banner{background:#fff;border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:8px;padding:12px 16px;margin:0 0 18px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;line-height:1.4}
+.banner.warn{border-left-color:var(--warn)}
+.banner .grow{flex:1;min-width:220px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:12px;-webkit-overflow-scrolling:touch}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th{background:#EEF1F4;text-align:left;font-weight:600;padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:13px;color:#39434d}
+table.t td{border-bottom:1px solid #EEF1F4;padding:4px 6px;vertical-align:middle}
+table.t tr.cur td{background:#FBF6EC}
+table.t input,table.t select{min-height:40px;padding:6px 8px;border-radius:6px;min-width:76px}
+table.t td.w input{min-width:190px} table.t td.n{white-space:nowrap}
+table.t td .btn{min-height:40px;padding:6px 12px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;background:#D3D8DC}.dot.y{background:var(--ok)}
+.chk{display:flex!important;gap:10px;align-items:center;font-weight:600;margin:10px 0 0;cursor:pointer}
+.chk input{width:22px;height:22px;min-height:0;flex:none;accent-color:var(--ok)}
+.seg.two{grid-template-columns:1fr 1fr}.seg.four{grid-template-columns:repeat(3,auto);justify-content:start}
+.seg button.on.pick{border-color:var(--navy);background:#EEF1F4;color:var(--navy)}
+.seg.four button{min-height:44px;padding:6px 16px}
+.checks.bad{border-left-color:var(--bad)} .checks .warnhead{margin-top:12px}
+.checks li .btn{min-height:36px;padding:4px 12px;margin-left:8px;font-size:14px}
+.readybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 20px);background:var(--navy);color:#fff;border-radius:12px;padding:12px 14px 12px 18px;display:flex;gap:10px;align-items:center;z-index:10;box-shadow:0 8px 28px rgba(0,0,0,.28);max-width:94vw;flex-wrap:wrap}
+.readybar .btn.ghost{color:#fff}
+.pager{display:flex;gap:10px;justify-content:space-between;margin:0 0 16px}
+.search{max-width:420px;margin-top:14px}
+.small{font-size:13px;color:var(--mute)}
+input:disabled,textarea:disabled,select:disabled{background:#F4F6F7;color:#39434d;-webkit-text-fill-color:#39434d;opacity:1}
 </style>
 </head>
 <body>
@@ -97,189 +126,428 @@ textarea{min-height:110px;line-height:1.45;resize:vertical}
 <script src="jspdf.plugin.autotable.min.js"></script>
 <script src="report.js"></script>
 <script>
-/* ================= State ================= */
+/* ================= Defaults ================= */
+const APP_VERSION='4.0';
 const DEFAULT_COMPANY = {
-  name:'MHS+ Project Management Services', address:'Dubai Investment Park, Dubai, UAE', website:'mhs-gpr.com', logo:'',
-  preparedBy:'Eng. Mohammed Saud', reviewedBy:'Eng. Mohammed', approvedBy:'Eng. Mohammed Hussain',
+  name:'MHS+ Project Management Services LLC', address:'#204 Falcon House, Dubai Investment Park, Dubai, UAE', website:'mhs-gpr.com', logo:'',
+  preparedBy:'Eng. Mohammed Saud', reviewedBy:'Eng. Mahmoud', approvedBy:'Eng. Mohammed Hussain Shaz',
   methodology:'The investigation was carried out using a Proceq GP8000 stepped-frequency continuous-wave ground penetrating radar. The instrument transmits broadband electromagnetic energy into the concrete and records reflections from interfaces with differing electrical properties, such as steel reinforcement, conduits, voids and the slab underside. Depth is calculated from two-way travel time using a wave velocity calibrated on site. Line scans and area (C-scan) grids were taken at each location, and detected reinforcement and services were marked on the concrete surface.',
   limitations:'GPR detects contrasts in electrical properties and does not identify materials directly. Results depend on concrete condition, moisture content and reinforcement density; targets beneath dense steel may be masked, and objects closer together than the resolution limit may not be distinguished. Bar diameter, and whether a service is live or dead, cannot be determined by GPR. Depths are based on the calibrated wave velocity stated for each location and should be regarded as estimates. The absence of a detected target does not guarantee the absence of an object. Findings apply only to the areas scanned on the date of the investigation.'
 };
-const DEFAULT_INSTR = { model:'Proceq GP8000', serial:'', antenna:'Stepped-frequency, 0.2 to 4.0 GHz', calBy:'Betalink Instrumentation & Calibration Services', certNo:'', calDate:'', calDue:'', certImage:'' };
-const today = () => new Date().toISOString().slice(0,10);
-const newLoc = (n) => ({ uid:Math.random().toString(36).slice(2,9), id:'L-'+String(n).padStart(2,'0'), description:'', scanType:'', er:'', erMethod:'',
-  orientation:'', spacing:'', cover:'', bottom:'', targets:'', thickness:'', anomalies:'', conclusion:'', status:'', result:'', photo:'', scan:'' });
-function blankJob(company){
-  return { job:{ reportNo:'', rev:'0', date:today(), project:'', location:'', client:'', clientRef:'', scanDate:today(), scope:'', siteMap:'', photos:[],
-      preparedBy:company.preparedBy, reviewedBy:company.reviewedBy, approvedBy:company.approvedBy, revNotes:'' },
-    instrument:{...DEFAULT_INSTR}, locations:[newLoc(1)], summary:'' };
-}
-let settings = JSON.parse(localStorage.getItem('gpr.settings')||'null') || { shortcut:'MHS GPR Draft', company:{...DEFAULT_COMPANY}, instrument:{...DEFAULT_INSTR} };
-if(!settings.shortcut) settings.shortcut='MHS GPR Draft';
-let S = null; let view = 'job'; let lastPrompt = '';
+const DEFAULT_INSTR = { model:'Proceq GP8000', serial:'', certSerial:'', antenna:'Stepped-frequency, 0.2 to 4.0 GHz', calBy:'Betalink Instrumentation & Calibration Services', certNo:'', calDate:'', calDue:'', certImage:'' };
+const DEFAULT_DEVICE = { name:'iPad 1', prefix:'MHS', from:200, to:399, year:0, next:0 };
+const DEFAULT_DEFAULTS = { idPrefix:'S-', description:'', scanType:'', er:'', erMethod:'', orientation:'', spacing:'', thickness:'' };
+const LOC_BLANK = { id:'', description:'', scanType:'', er:'', erMethod:'', orientation:'', spacing:'', cover:'', bottom:'', targets:'', thickness:'', anomalies:'',
+  conclusion:'', status:'', result:'', photo:'', scan:'', erChecked:false, dupOf:'', sameOk:false };
+const FINDINGS = ['description','scanType','er','erMethod','orientation','spacing','cover','bottom','targets','thickness','anomalies','conclusion'];
+const STATUS_LABEL = {clear:'Clear to proceed',restricted:'With restrictions',notfeasible:'Not feasible'};
+const REG_LABEL = {draft:'Draft',issued:'Issued',superseded:'Superseded'};
 
-/* ================= Storage (IndexedDB for images) ================= */
+const uid = () => Math.random().toString(36).slice(2,10);
+const today = () => new Date().toISOString().slice(0,10);
+const T = x => String(x??'').trim();
+
+let settings = JSON.parse(localStorage.getItem('gpr.settings')||'null') || {};
+settings.shortcut = settings.shortcut || 'MHS GPR Draft';
+settings.company = {...DEFAULT_COMPANY, ...(settings.company||{})};
+settings.instrument = {...DEFAULT_INSTR, ...(settings.instrument||{})};
+settings.device = {...DEFAULT_DEVICE, ...(settings.device||{})};
+const saveSettings = () => { try{ localStorage.setItem('gpr.settings', JSON.stringify(settings)); }catch{ toast('Settings not saved: the logo or certificate image is too large.'); } };
+
+let S=null, REG=[], view='job', lastPrompt='', REGQ='', TABLEF='all';
+let BULK={scans:[],photos:[],sort:false,prefix:'',start:null};
+
+/* ================= IndexedDB ================= */
 const idb = new Promise((res,rej)=>{ const r=indexedDB.open('gpr',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
-const dbGet = async k => { const d=await idb; return new Promise(r=>{ const q=d.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>r(q.result); q.onerror=()=>r(null); }); };
-const dbSet = async (k,v) => { const d=await idb; return new Promise((r,j)=>{ const t=d.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=r; t.onerror=()=>j(t.error); }); };
+const tx = async (mode,fn) => { const d=await idb; return new Promise((r,j)=>{ const t=d.transaction('kv',mode); const q=fn(t.objectStore('kv')); t.oncomplete=()=>r(q&&q.result); t.onerror=()=>j(t.error); }); };
+const dbGet = k => tx('readonly',s=>s.get(k)).catch(()=>null);
+const dbSet = (k,v) => tx('readwrite',s=>{ s.put(v,k); });
+const dbDel = k => tx('readwrite',s=>{ s.delete(k); });
+const dbKeys = () => tx('readonly',s=>s.getAllKeys());
+
+/* ================= Images (stored once, referenced by id) ================= */
+const IMG = new Map();
+const isRef = v => typeof v==='string' && v.startsWith('img:');
+const src = v => isRef(v) ? (IMG.get(v)||'') : (v||'');
+async function putImage(dataUrl){ const id='img:'+uid()+uid(); await dbSet(id,dataUrl); IMG.set(id,dataUrl); return id; }
+function refsOf(o,acc=new Set()){ if(typeof o==='string'){ if(isRef(o)) acc.add(o); } else if(o&&typeof o==='object') for(const k in o) refsOf(o[k],acc); return acc; }
+async function loadImages(j){ for(const r of refsOf(j)) if(!IMG.has(r)) IMG.set(r, (await dbGet(r))||''); }
+function mapStrings(o,fn){ if(typeof o==='string') return fn(o); if(Array.isArray(o)) return o.map(x=>mapStrings(x,fn)); if(o&&typeof o==='object'){ const r={}; for(const k in o) r[k]=mapStrings(o[k],fn); return r; } return o; }
+const inlineImages = j => mapStrings(j, v=>isRef(v)?src(v):v);
+async function externalise(o){
+  if(typeof o==='string') return o.startsWith('data:image')&&o.length>4000 ? await putImage(o) : o;
+  if(Array.isArray(o)){ const r=[]; for(const x of o) r.push(await externalise(x)); return r; }
+  if(o&&typeof o==='object'){ const r={}; for(const k in o) r[k]=await externalise(o[k]); return r; }
+  return o;
+}
+async function gc(){
+  try{ const keep=new Set(); for(const r of REG){ const j=(S&&r.id===S.id)?S:await dbGet('job:'+r.id); if(j) refsOf(j,keep); }
+    for(const k of await dbKeys()) if(isRef(k)&&!keep.has(k)){ await dbDel(k); IMG.delete(k); } }catch(e){ console.warn(e); }
+}
+function resizeImage(file,max=1600,q=0.82){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>shrink(fr.result,max,q).then(res,rej); fr.onerror=rej; fr.readAsDataURL(file); }); }
+function shrink(dataUrl,max,q){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>{ const r=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*r); c.height=Math.round(im.height*r); const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',q)); }; im.onerror=rej; im.src=dataUrl; }); }
+
+/* ================= Report numbering (per-iPad block) ================= */
+const yearNow = () => new Date().getFullYear();
+const fmtNo = n => `${T(settings.device.prefix)||'MHS'}-${String(n).padStart(3,'0')}-${yearNow()}`;
+function peekNumber(){ const d=settings.device, y=yearNow(); if(+d.year!==y || !(+d.next)){ d.year=y; d.next=parseInt(d.from)||1; saveSettings(); } return parseInt(d.next); }
+function takeNumber(){
+  let n=peekNumber(); const used=new Set(REG.map(r=>r.reportNo));
+  while(used.has(fmtNo(n))) n++;
+  settings.device.next=n+1; saveSettings();
+  const left=(parseInt(settings.device.to)||0)-n;
+  if(left<0) setTimeout(()=>toast(`This iPad has used its whole number block. Set a new block in Company and iPad settings.`,6000),600);
+  else if(left<10) setTimeout(()=>toast(`Only ${left} report numbers left in this iPad's block.`,5000),600);
+  return fmtNo(n);
+}
+
+/* ================= Jobs and register ================= */
+function nextLocId(j=S){ const p=j.defaults?.idPrefix??''; let max=0; j.locations.forEach(L=>{ const m=String(L.id).match(/(\d+)\s*$/); if(m) max=Math.max(max,+m[1]); }); return p+(max+1); }
+function newLoc(j=S){ const d=j.defaults||{}; return {...LOC_BLANK, uid:uid(), id:nextLocId(j), description:d.description||'', scanType:d.scanType||'', er:d.er||'', erMethod:d.erMethod||'',
+  orientation:d.orientation||'', spacing:d.spacing||'', thickness:d.thickness||''}; }
+function blankJob(){ const c=settings.company; const {certImage,...ins}=settings.instrument;
+  return { id:uid(), meta:{status:'draft',issuedAt:'',device:settings.device.name,created:new Date().toISOString(),supersedes:''}, layout:'standard', defaults:{...DEFAULT_DEFAULTS},
+    job:{ reportNo:'', rev:'0', date:today(), project:'', location:'', client:'', clientRef:'', scanDate:today(), scope:'', siteMap:'', photos:[],
+      preparedBy:c.preparedBy, reviewedBy:c.reviewedBy, approvedBy:c.approvedBy, revNotes:'' },
+    instrument:{...DEFAULT_INSTR,...ins,certImage:certImage||''}, locations:[], summary:'' }; }
+function normalise(j){
+  j.id=j.id||uid(); j.meta={status:'draft',issuedAt:'',device:'',created:'',supersedes:'',...(j.meta||{})};
+  j.layout=j.layout||'standard'; j.defaults={...DEFAULT_DEFAULTS,...(j.defaults||{})}; j.instrument={...DEFAULT_INSTR,...(j.instrument||{})};
+  j.job.photos=j.job.photos||[]; j.summary=j.summary||'';
+  j.locations=(j.locations||[]).map(L=>({...LOC_BLANK,...L,uid:L.uid||uid()}));
+  if(!j.locations.length) j.locations.push(newLoc(j));
+  return j;
+}
+const regEntry = j => ({ id:j.id, reportNo:T(j.job.reportNo), rev:T(j.job.rev), project:T(j.job.project), client:T(j.job.client), location:T(j.job.location),
+  scanDate:j.job.scanDate||'', status:j.meta.status, issuedAt:j.meta.issuedAt||'', device:j.meta.device||'', n:j.locations.length, updated:j.updated||Date.now() });
+function upsertReg(j){ const e=regEntry(j), i=REG.findIndex(r=>r.id===j.id); if(i<0) REG.unshift(e); else REG[i]=e; }
+const locked = () => S && S.meta.status!=='draft';
+
 let saveTimer;
-function save(){ document.getElementById('saveState').textContent='Saving'; clearTimeout(saveTimer);
-  saveTimer=setTimeout(async()=>{ try{ await dbSet('current',S); document.getElementById('saveState').textContent='Saved on this iPad'; }catch(e){ document.getElementById('saveState').textContent='Not saved: storage full'; } },400); }
-const saveSettings = () => localStorage.setItem('gpr.settings', JSON.stringify(settings));
+function setSave(t){ const el=document.getElementById('saveState'); if(el) el.textContent=t; }
+function save(now){
+  const j=S; if(!j) return; setSave('Saving'); clearTimeout(saveTimer);
+  const run=async()=>{ try{ j.updated=Date.now(); await dbSet('job:'+j.id,j); upsertReg(j); await dbSet('register',REG); setSave('Saved on this iPad'); }catch(e){ console.error(e); setSave('Not saved: storage full'); toast('This iPad is out of storage. Issue or delete old reports.',6000); } };
+  if(now) return run(); saveTimer=setTimeout(run,400);
+}
+async function openJob(id){
+  if(S) await save(true);
+  const j=await dbGet('job:'+id); if(!j) return toast('That report could not be found on this iPad.');
+  normalise(j); await loadImages(j); S=j; await dbSet('currentId',id); view='job'; render();
+}
+async function createJob(){
+  if(S) await save(true);
+  const j=blankJob(); j.job.reportNo=takeNumber(); j.locations=[newLoc(j)];
+  S=j; await save(true); await dbSet('currentId',j.id); view='job'; render(); toast(`New report ${j.job.reportNo} started`);
+}
+async function addJob(raw,{keepNumber=true}={}){
+  if(S) await save(true);
+  let j=await externalise(raw); normalise(j); j.id=uid();
+  if(!keepNumber) j.job.reportNo=takeNumber();
+  await loadImages(j); S=j; await save(true); await dbSet('currentId',j.id); view='job'; render();
+}
+async function deleteJob(id){
+  const r=REG.find(x=>x.id===id); if(!r) return;
+  if(r.status!=='draft') return toast('Issued reports stay in the register.');
+  if(!confirm(`Delete draft ${r.reportNo||'report'} Rev ${r.rev} from this iPad? This cannot be undone.`)) return;
+  await dbDel('job:'+id); REG=REG.filter(x=>x.id!==id); await dbSet('register',REG);
+  if(r.rev==='0' && r.reportNo===fmtNo(parseInt(settings.device.next)-1)){ settings.device.next=parseInt(settings.device.next)-1; saveSettings(); }
+  if(S && S.id===id){ S=null; if(REG.length) await openJob(REG[0].id); else await createJob(); }
+  else renderView();
+  gc(); toast('Draft deleted');
+}
+async function newRevision(){
+  const next=String((parseInt(S.job.rev)||0)+1);
+  if(REG.some(r=>r.reportNo===S.job.reportNo && r.rev===next)) return toast(`Rev ${next} already exists in the register. Open it from there.`,5000);
+  if(!confirm(`Create Rev ${next} of ${S.job.reportNo}? Rev ${S.job.rev} stays in the register unchanged.`)) return;
+  await save(true);
+  const j=structuredClone(S); j.id=uid(); j.job.rev=next; j.job.date=today(); j.job.revNotes='';
+  j.meta={status:'draft',issuedAt:'',device:settings.device.name,created:new Date().toISOString(),supersedes:S.id};
+  S=j; await save(true); await dbSet('currentId',j.id); view='job'; render(); toast(`Rev ${next} created. Add revision notes on Job details.`,4000);
+}
 
 /* ================= Helpers ================= */
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function get(path){ return path.split('.').reduce((o,k)=>o?.[k], path.startsWith('settings.')?{settings}:S); }
-function set(path,val){ const root=path.startsWith('settings.')?{settings}:S; const ks=path.split('.'); const last=ks.pop(); ks.reduce((o,k)=>o[k],root)[last]=val;
-  if(path.startsWith('settings.')) saveSettings(); else save(); }
+function root(path){ return path.startsWith('settings.')?{settings}:S; }
+function get(path){ return path.split('.').reduce((o,k)=>o?.[k], root(path)); }
+function set(path,val){
+  const isSet=path.startsWith('settings.'); if(!isSet && locked()) return;
+  const ks=path.split('.'); const last=ks.pop(); ks.reduce((o,k)=>o[k],root(path))[last]=val;
+  if(isSet){ saveSettings(); return; }
+  const m=path.match(/^locations\.(\d+)\.(\w+)$/);
+  if(m){ const L=S.locations[+m[1]]; if(FINDINGS.includes(m[2])){ L.dupOf=''; L.sameOk=false; } if(m[2]==='er') L.erChecked=!!T(val); }
+  save();
+}
 const fld = (path,label,o={}) => `<div class="${o.full?'full':''}"><label for="${path}">${label}${o.hint?` <span class="hint">${o.hint}</span>`:''}</label>${
   o.area?`<textarea id="${path}" data-p="${path}" placeholder="${esc(o.ph||'')}" ${o.rows?`style="min-height:${o.rows*24}px"`:''}>${esc(get(path))}</textarea>`
   :`<input id="${path}" data-p="${path}" type="${o.type||'text'}" ${o.mode?`inputmode="${o.mode}"`:''} placeholder="${esc(o.ph||'')}" value="${esc(get(path))}">`}${o.after||''}</div>`;
-const imgBox = (path,label,ph) => { const src=get(path); return `<div><label>${label}</label><div class="img">${src?`<img src="${src}" alt="${esc(label)}"><button class="x" data-clear="${path}">Remove</button>`:`<div class="ph">${ph}</div>`}<input type="file" accept="image/*" data-img="${path}" aria-label="${esc(label)}"></div></div>`; };
-function toast(msg,ms=2600){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),ms); }
-function resizeImage(file,max=1600){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>{ const im=new Image(); im.onload=()=>{ const r=Math.min(1,max/Math.max(im.width,im.height)); const c=document.createElement('canvas'); c.width=Math.round(im.width*r); c.height=Math.round(im.height*r); const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height); res(c.toDataURL('image/jpeg',0.82)); }; im.onerror=rej; im.src=fr.result; }; fr.onerror=rej; fr.readAsDataURL(file); }); }
-const locByUid = uid => S.locations.find(l=>l.uid===uid);
-const STATUS_LABEL = {clear:'Clear to proceed',restricted:'With restrictions',notfeasible:'Not feasible'};
+const imgBox = (path,label,ph,o={}) => { const s=src(get(path)); return `<div class="${o.full?'full':''}"><label>${label}</label><div class="img">${s?`<img src="${s}" alt="${esc(label)}"><button class="x" data-clear="${path}">Remove</button>`:`<div class="ph">${ph}</div>`}<input type="file" accept="image/*" data-img="${path}" data-max="${o.max||1600}" aria-label="${esc(label)}"></div></div>`; };
+function toast(msg,ms=2600){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const t=document.createElement('div'); t.className='toast'; t.innerHTML=msg; document.body.appendChild(t); if(ms) setTimeout(()=>t.remove(),ms); return t; }
+const locByUid = u => S.locations.find(l=>l.uid===u);
+const pristine = () => S.locations.length===1 && !S.locations[0].scan && !S.locations[0].photo && !T(S.locations[0].result) && !T(S.locations[0].cover) && !T(S.locations[0].spacing) && !S.locations[0].status;
+const listIds = ids => ids.length>8 ? ids.slice(0,8).join(', ')+` and ${ids.length-8} more` : ids.join(', ');
+const normSerial = x => T(x).toUpperCase().replace(/[^A-Z0-9]/g,'');
+const isNone = x => /^(none|nil|no|n\/a|na|-|not (observed|detected|resolved|found))\b/i.test(T(x));
+const tick = (on,label) => `<span class="dot ${on?'y':''}" role="img" aria-label="${label}: ${on?'yes':'no'}"></span>`;
+const fileBase = () => `${(S.job.reportNo||'GPR-Report').replace(/[^\w.-]+/g,'_')}_Rev${T(S.job.rev)||0}`;
 
-/* ================= Rendering ================= */
+/* ================= Navigation ================= */
 function renderNav(){
   const n=(k,t)=>`<button class="nav ${view===k?'on':''}" data-go="${k}">${t}</button>`;
   document.getElementById('nav').innerHTML =
-    n('job','Job details')+n('instrument','Equipment and calibration')+n('photos','Site images')+
-    `<div class="group">Scan locations</div>`+
+    n('register','Reports register')+
+    `<div class="group">This report</div>`+n('job','Job details')+n('defaults','Job defaults and layout')+n('instrument','Equipment and calibration')+n('photos','Site images')+
+    `<div class="group">Scan locations (${S.locations.length})</div>`+n('table','All locations table')+(locked()?'':n('bulk','Bulk add from photos'))+
     S.locations.map((L,i)=>`<button class="nav ${view==='loc:'+L.uid?'on':''}" data-go="loc:${L.uid}"><div class="loc"><span class="bar ${L.status}"></span><span><div class="t">${esc(L.id||'Location '+(i+1))}</div><div class="m">${esc([L.spacing&&L.spacing+' c/c',L.cover&&'cover '+L.cover].filter(Boolean).join(', ')||L.description||'No findings yet')}</div></span></div></button>`).join('')+
-    `<button class="btn ghost" id="addLoc" style="margin:6px 4px">Add location</button>`+
-    `<div class="group">Report</div>`+n('summary','Summary and checks')+n('files','Job files')+n('settings','Company settings');
-  document.getElementById('hdrNo').innerHTML = `${esc(S.job.reportNo||'New report')}<small>Rev ${esc(S.job.rev)}</small>`;
+    (locked()?'':`<button class="btn ghost" id="addLoc" style="margin:6px 4px">Add location</button>`)+
+    `<div class="group">Finish</div>`+n('summary','Summary, checks and issue')+n('settings','Company and iPad settings');
+  document.getElementById('hdrNo').innerHTML = `${esc(S.job.reportNo||'New report')}<small>Rev ${esc(S.job.rev)}</small><span class="badge ${S.meta.status}">${REG_LABEL[S.meta.status]}</span>`;
+}
+
+/* ================= Views ================= */
+function regRows(){
+  const q=REGQ.toLowerCase();
+  const rows=REG.filter(r=>!q||[r.reportNo,r.client,r.project,r.location].join(' ').toLowerCase().includes(q)).sort((a,b)=>b.updated-a.updated);
+  if(!rows.length) return `<tr><td colspan="8" class="small" style="padding:14px">No reports match.</td></tr>`;
+  return rows.map(r=>`<tr class="${S&&r.id===S.id?'cur':''}"><td class="n"><strong>${esc(r.reportNo||'(no number)')}</strong></td><td>${esc(r.rev)}</td><td>${esc(r.client)}</td><td>${esc(r.project)}</td><td class="n">${esc(r.scanDate)}</td><td>${r.n}</td>
+    <td><span class="badge ${r.status}">${REG_LABEL[r.status]}</span></td><td class="n">${S&&r.id===S.id?'<span class="small">Open now</span>':`<button class="btn" data-open="${r.id}">Open</button>`}${r.status==='draft'?` <button class="btn ghost danger" data-deljob="${r.id}">Delete</button>`:''}</td></tr>`).join('');
+}
+function viewRegister(){
+  const d=settings.device;
+  return `<h1>Reports register</h1><p class="lead">Every report on this iPad (${esc(d.name)}). Numbers come from this iPad's block ${esc(d.from)} to ${esc(d.to)}. The next new report will be <strong>${esc(fmtNo(peekNumber()))}</strong>.</p>
+  <div class="row"><button class="btn primary" id="newJob">New report</button>
+  <label class="btn" style="margin:0;display:inline-flex;align-items:center;font-size:16px;color:var(--navy)">Open job file<input type="file" accept=".json,application/json" id="importJob" hidden></label>
+  <button class="btn" id="exportReg">Export register</button><button class="btn" id="sampleJob">Load sample job</button></div>
+  <input type="search" class="search" id="regSearch" placeholder="Search number, client, project or site" value="${esc(REGQ)}" aria-label="Search reports">
+  <div class="tw"><table class="t"><thead><tr><th>Report no.</th><th>Rev</th><th>Client</th><th>Project</th><th>Scanned</th><th>Loc.</th><th>Status</th><th></th></tr></thead><tbody id="regBody">${regRows()}</tbody></table></div>
+  <p class="note" style="margin-top:12px">Issued reports are locked. To change one, open it and create a new revision. Drafts can be deleted.</p>`;
+}
+function viewJob(){
+  return `<h1>Job details</h1><p class="lead">Cover page and document control. The report number is assigned from this iPad's block.</p>
+  <div class="grid">${fld('job.reportNo','Report no.',{ph:'MHS-206-2026'})}${fld('job.rev','Revision',{mode:'numeric'})}
+  ${fld('job.project','Project',{full:true,ph:'Coring in LG floor plant room for tank separation'})}
+  ${fld('job.location','Site location',{ph:'Business Bay, Dubai'})}${fld('job.client','Client')}
+  ${fld('job.clientRef','Client reference',{hint:'optional'})}${fld('job.scanDate','Date of scanning',{type:'date'})}
+  ${fld('job.date','Date of issue',{type:'date'})}<div></div>
+  ${fld('job.preparedBy','Prepared by')}${fld('job.reviewedBy','Reviewed by')}${fld('job.approvedBy','Approved by')}${fld('job.revNotes','Revision notes',{hint:'what changed in this revision'})}
+  ${fld('job.scope','Introduction and scope',{full:true,area:true,ph:'MHS+ was appointed by the client to locate reinforcement and embedded services at the locations shown on the 10th floor slab, prior to coring...'})}
+  ${imgBox('job.siteMap','Site location map or scan area plan','Tap to add a map or plan',{full:true})}</div>`;
+}
+function viewDefaults(){
+  return `<h1>Job defaults and layout</h1><p class="lead">New locations start with these values. Set them once for the slab, then change only what differs at each location.</p>
+  <div class="grid">${fld('defaults.idPrefix','Location ID prefix',{ph:'S-',hint:'next ID: '+esc(nextLocId())})}${fld('defaults.scanType','Scan type and area',{ph:'C-scan grid, 600 x 600 mm'})}
+  ${fld('defaults.description','Description',{full:true,ph:'Floor 10, proposed 150 mm core'})}
+  ${fld('defaults.er','Dielectric constant (εr)',{mode:'decimal',ph:'8.8'})}${fld('defaults.erMethod','Velocity method',{ph:'Hyperbola fit'})}
+  ${fld('defaults.orientation','Top reinforcement',{ph:'Two-way mesh'})}${fld('defaults.spacing','Top bar spacing',{ph:'150 mm'})}
+  ${fld('defaults.thickness','Slab thickness',{ph:'150 mm'})}</div>
+  <div class="row" style="margin-top:14px"><button class="btn" id="applyDefaults">Fill empty fields in all locations</button></div>
+  <p class="note">A dielectric constant that comes from these defaults is flagged until someone ticks that it matches the GP8000 screen for that location.</p>
+  <h2>Report layout</h2>
+  <div class="seg two" role="group" aria-label="Report layout">${[['standard','Standard: one location per page'],['compact','Compact: two locations per page']].map(([k,t])=>`<button class="pick ${S.layout===k?'on':''}" data-layout="${k}" aria-pressed="${S.layout===k}">${t}</button>`).join('')}</div>
+  <p class="note">Compact also reduces image size, so a 100-location report stays small enough to email.</p>`;
+}
+function viewInstrument(){
+  const I=S.instrument, mm=T(I.serial)&&T(I.certSerial)&&normSerial(I.serial)!==normSerial(I.certSerial);
+  return `<h1>Equipment and calibration</h1><p class="lead">Carried into every new report from company settings. Update when the instrument is recalibrated.</p>
+  ${mm?`<div class="banner warn"><span class="grow"><strong>Serial numbers do not match.</strong> Instrument ${esc(I.serial)}, certificate ${esc(I.certSerial)}. Use the certificate for the instrument that did the scan.</span></div>`:''}
+  <div class="grid">${fld('instrument.model','Instrument')}${fld('instrument.antenna','Antenna / frequency')}
+  ${fld('instrument.serial','Serial number on the instrument',{ph:'PM08-006-0181'})}${fld('instrument.certSerial','Serial number on the certificate',{hint:'cross-checked'})}
+  ${fld('instrument.calBy','Calibrated by',{full:true})}${fld('instrument.certNo','Certificate no.')}${fld('instrument.calDate','Calibration date',{type:'date'})}${fld('instrument.calDue','Valid until',{type:'date'})}<div></div>
+  ${imgBox('instrument.certImage','Calibration certificate','Tap to add a photo or scan of the certificate',{full:true})}</div>
+  <div class="row" style="margin-top:14px"><button class="btn" id="instrDefault">Save as company default</button></div>`;
+}
+function viewPhotos(){
+  return `<h1>Site images</h1><p class="lead">General site photos. Location photos and scan images go on each location page.</p>
+  <div class="photos">${S.job.photos.map((p,i)=>`<div><div class="img"><img src="${src(p.src)}" alt="Site photo ${i+1}"><button class="x" data-delphoto="${i}">Remove</button></div><input style="margin-top:8px" data-p="job.photos.${i}.caption" placeholder="Caption" value="${esc(p.caption)}"></div>`).join('')}
+  <div><div class="img"><div class="ph">Tap to add photos</div><input type="file" accept="image/*" multiple id="addPhotos" aria-label="Add site photos"></div></div></div>`;
+}
+function viewLocation(){
+  const L=locByUid(view.slice(4)); if(!L){ view='table'; return viewTable(); }
+  const i=S.locations.indexOf(L), p=`locations.${i}`, vel=gprVelocity(L.er), prev=S.locations[i-1], next=S.locations[i+1];
+  const pager=`<div class="pager">${prev?`<button class="btn" data-allow data-go="loc:${prev.uid}">Previous: ${esc(prev.id)}</button>`:'<span></span>'}${next?`<button class="btn" data-allow data-go="loc:${next.uid}">Next: ${esc(next.id)}</button>`:(locked()?'':`<button class="btn" id="addNext">Add ${esc(nextLocId())}</button>`)}</div>`;
+  return `${pager}<h1>${esc(L.id||'Location')} <span class="small" style="font-weight:500">${i+1} of ${S.locations.length}</span></h1><p class="lead">Enter what you measured and concluded at this location. The result text is drafted from these fields.</p>
+  ${L.dupOf?`<div class="banner warn"><span class="grow"><strong>Copied from ${esc(L.dupOf)}.</strong> Edit the findings measured here, or confirm they are the same as ${esc(L.dupOf)}.</span><button class="btn" data-samedup="${L.uid}">Findings confirmed</button></div>`:''}
+  <div class="grid">${fld(p+'.id','Location ID')}${fld(p+'.scanType','Scan type and area',{ph:'C-scan grid, 600 x 600 mm'})}
+  ${fld(p+'.description','Description',{full:true,ph:'Floor 10, proposed 150 mm core'})}
+  <h2 class="full" style="margin:10px 0 0">Measurements</h2>
+  ${fld(p+'.er','Dielectric constant (εr)',{mode:'decimal',ph:'8.8',after:`<span class="readout" id="velOut">${vel?`v = ${vel.toFixed(3)} m/ns`:'Enter εr to see wave velocity'}</span><label class="chk"><input type="checkbox" data-chk="${p}.erChecked" ${L.erChecked?'checked':''}> Matches the GP8000 screen for this location</label>`})}
+  ${fld(p+'.erMethod','Velocity method',{ph:'Hyperbola fit'})}
+  ${fld(p+'.orientation','Top reinforcement',{ph:'Two-way mesh'})}${fld(p+'.spacing','Top bar spacing',{ph:'150 mm'})}
+  ${fld(p+'.cover','Concrete cover',{ph:'40 to 48 mm'})}${fld(p+'.bottom','Bottom reinforcement',{hint:'if detected'})}
+  ${fld(p+'.targets','Other targets and depth',{ph:'Conduit at approx. 100 mm, running N-S'})}${fld(p+'.thickness','Slab thickness',{hint:'if detected'})}
+  ${fld(p+'.anomalies','Anomalies',{full:true,ph:'None observed'})}
+  <h2 class="full" style="margin:10px 0 0">Images</h2>
+  ${imgBox(p+'.photo','Marked-up site photo','Tap to take or choose a photo',{max:1400})}${imgBox(p+'.scan','GPR scan image','Tap to add the GP8000 screenshot')}
+  <h2 class="full" style="margin:10px 0 0">Engineer's decision</h2>
+  <div class="full"><div class="seg" role="group" aria-label="Status">${Object.entries(STATUS_LABEL).map(([k,t])=>`<button class="${k} ${L.status===k?'on':''}" data-status="${k}" aria-pressed="${L.status===k}">${t}</button>`).join('')}</div></div>
+  ${fld(p+'.conclusion',"Engineer's conclusion",{full:true,area:true,rows:3,ph:'Core feasible at marked position. Conduit lies 120 mm east of the core centre, clear of the core.'})}
+  <div class="full"><label for="${p}.result">Result text <span class="hint">appears in the report</span></label>
+  <div class="ai"><button class="btn primary" data-draft="${L.uid}">Draft from fields</button><button class="btn" data-ai="${L.uid}">Improve with AI</button><button class="btn" data-paste="${L.uid}">Paste AI draft</button></div>
+  <p class="note" style="margin:0 0 8px">Draft from fields works offline. Improve with AI runs your "${esc(settings.shortcut)}" shortcut, then come back and tap Paste AI draft.</p>
+  <textarea id="${p}.result" data-p="${p}.result" style="min-height:170px">${esc(L.result)}</textarea></div></div>
+  <div class="row" style="margin-top:22px"><button class="btn" data-dup="${L.uid}">Duplicate location</button><button class="btn danger" data-del="${L.uid}">Delete location</button></div>
+  <div style="margin-top:22px">${pager}</div>`;
+}
+function viewTable(){
+  const chk=checkJob(), flagged=chk.flagged;
+  const incomplete=L=>!L.status||!T(L.result)||!L.scan;
+  const rows=S.locations.map((L,i)=>({L,i})).filter(({L})=>TABLEF==='all'||(TABLEF==='incomplete'&&incomplete(L))||(TABLEF==='flagged'&&flagged.has(L.uid)));
+  const inp=(i,k,w)=>`<td class="${w?'w':''}"><input data-p="locations.${i}.${k}" value="${esc(S.locations[i][k])}" aria-label="${k}"></td>`;
+  return `<h1>All locations</h1><p class="lead">Fill findings for many locations at once. Tap an ID to open its full page with images and the result text.</p>
+  <div class="row"><button class="btn primary" id="draftAll">Draft all empty results</button>${locked()?'':`<button class="btn" data-go="bulk">Bulk add from photos</button><button class="btn" id="addLoc2">Add location</button>`}</div>
+  <div class="seg four" role="group" aria-label="Filter" style="margin-top:14px">${[['all',`All (${S.locations.length})`],['incomplete','Incomplete'],['flagged',`Flagged (${flagged.size})`]].map(([k,t])=>`<button class="pick ${TABLEF===k?'on':''}" data-allow data-filter="${k}">${t}</button>`).join('')}</div>
+  <div class="tw"><table class="t"><thead><tr><th>ID</th><th>Decision</th><th>Cover</th><th>Top bars</th><th>Bottom</th><th>Other targets</th><th>Slab</th><th>εr</th><th>εr checked</th><th>Scan</th><th>Photo</th><th>Result</th><th>Description</th></tr></thead><tbody>
+  ${rows.map(({L,i})=>`<tr><td class="n"><button class="btn ghost" data-allow data-go="loc:${L.uid}"><strong>${esc(L.id||i+1)}</strong></button></td>
+    <td><select data-p="locations.${i}.status" aria-label="Decision for ${esc(L.id)}"><option value="">Not set</option>${Object.entries(STATUS_LABEL).map(([k,t])=>`<option value="${k}" ${L.status===k?'selected':''}>${t}</option>`).join('')}</select></td>
+    ${inp(i,'cover')}${inp(i,'spacing')}${inp(i,'bottom')}${inp(i,'targets',1)}${inp(i,'thickness')}${inp(i,'er')}
+    <td style="text-align:center"><input type="checkbox" style="width:22px;height:22px;min-height:0" data-chk="locations.${i}.erChecked" ${L.erChecked?'checked':''} aria-label="εr checked for ${esc(L.id)}"></td>
+    <td style="text-align:center">${tick(L.scan,'Scan')}</td><td style="text-align:center">${tick(L.photo,'Photo')}</td><td style="text-align:center">${tick(T(L.result),'Result')}</td>${inp(i,'description',1)}</tr>`).join('')||`<tr><td colspan="13" class="small" style="padding:14px">Nothing in this filter.</td></tr>`}
+  </tbody></table></div>`;
+}
+function bulkPairs(){
+  const sortF=a=>BULK.sort?[...a].sort((x,y)=>x.name.localeCompare(y.name,undefined,{numeric:true})):a;
+  const sc=sortF(BULK.scans), ph=sortF(BULK.photos); const start=parseInt(BULK.start)||1;
+  return sc.map((f,k)=>({id:(BULK.prefix??'')+(start+k), scan:f, photo:ph[k]||null}));
+}
+function bulkPreview(){
+  const P=bulkPairs(); if(!P.length) return '<p class="note">No screenshots selected yet.</p>';
+  const warn=BULK.photos.length&&BULK.photos.length!==BULK.scans.length?`<div class="banner warn"><span class="grow">${BULK.scans.length} screenshots and ${BULK.photos.length} photos selected. Pairs are matched in order, so check the list below.</span></div>`:'';
+  const clash=pristine()?[]:P.filter(p=>S.locations.some(L=>T(L.id)===p.id)).map(p=>p.id);
+  return warn+(clash.length?`<div class="banner warn"><span class="grow">These IDs already exist in this report: ${esc(listIds(clash))}. Change the first number.</span></div>`:'')+
+   `<div class="tw"><table class="t"><thead><tr><th>New location</th><th>GP8000 screenshot</th><th>Marked-up photo</th></tr></thead><tbody>${P.map(p=>`<tr><td><strong>${esc(p.id)}</strong></td><td>${esc(p.scan.name)}</td><td>${p.photo?esc(p.photo.name):'<span class="small">none</span>'}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function viewBulk(){
+  if(BULK.start==null){ BULK.prefix=S.defaults.idPrefix??''; BULK.start=pristine()?(parseInt(String(S.locations[0].id).match(/(\d+)\s*$/)?.[1])||1):(parseInt(nextLocId().match(/(\d+)\s*$/)?.[1])||1); }
+  return `<h1>Bulk add from photos</h1><p class="lead">Choose the GP8000 screenshots for a batch, then the marked-up photos in the same order. One location is created per screenshot, filled from the job defaults.</p>
+  <div class="grid"><div><label for="bulkPrefix">First location ID</label><div class="row" style="flex-wrap:nowrap"><input id="bulkPrefix" value="${esc(BULK.prefix)}" style="width:90px" aria-label="ID prefix"><input id="bulkStart" type="number" inputmode="numeric" value="${esc(BULK.start)}" style="width:120px" aria-label="First number"></div></div><div></div>
+  <div><label>GP8000 screenshots</label><label class="btn" style="margin:0;display:inline-flex;align-items:center;font-size:16px;color:var(--navy)">Choose screenshots (${BULK.scans.length})<input type="file" accept="image/*" multiple id="bulkScans" hidden></label></div>
+  <div><label>Marked-up site photos <span class="hint">optional</span></label><label class="btn" style="margin:0;display:inline-flex;align-items:center;font-size:16px;color:var(--navy)">Choose photos (${BULK.photos.length})<input type="file" accept="image/*" multiple id="bulkPhotos" hidden></label></div>
+  <div class="full"><label class="chk" style="margin:0"><input type="checkbox" id="bulkSort" ${BULK.sort?'checked':''}> Sort each set by file name instead of selection order</label></div></div>
+  <div id="bulkPrev" style="margin-top:16px">${bulkPreview()}</div>
+  <div class="row" style="margin-top:16px"><button class="btn primary" id="bulkGo" ${BULK.scans.length?'':'disabled'}>Create ${BULK.scans.length||''} locations</button><button class="btn" id="bulkClear">Clear selection</button></div>
+  <p class="note" id="bulkProg"></p>`;
+}
+function viewSummary(){
+  const items=checkJob(), blocks=items.filter(x=>x.sev==='block'), warns=items.filter(x=>x.sev==='warn');
+  const li=x=>`<li>${esc(x.text)}${x.ack?`<button class="btn" data-ack="${x.ack}">Confirm correct</button>`:''}</li>`;
+  const st=S.meta.status;
+  const banner = st==='issued'?`<div class="banner"><span class="grow"><strong>Issued ${esc((S.meta.issuedAt||'').slice(0,10))}.</strong> This revision is locked. Create a new revision to make changes.</span><button class="btn" data-allow id="btnReshare">Share issued files again</button><button class="btn primary" data-allow id="btnNewRev">Create Rev ${(parseInt(S.job.rev)||0)+1}</button></div>`
+    : st==='superseded'?`<div class="banner warn"><span class="grow"><strong>Superseded.</strong> A later revision of this report exists. This copy is kept for the record.</span></div>`:'';
+  return `<h1>Summary, checks and issue</h1><p class="lead">Fix everything marked as blocking, review the rest, then issue. Issuing locks this revision.</p>${banner}
+  ${st==='draft'?`<div class="checks ${blocks.length?'bad':warns.length?'':'ok'}"><strong>${blocks.length?`${blocks.length} must be fixed before issue`:'Nothing is blocking issue'}</strong>${blocks.length?`<ul>${blocks.map(li).join('')}</ul>`:''}
+  ${warns.length?`<div class="warnhead"><strong>${warns.length} to review</strong></div><ul>${warns.map(li).join('')}</ul>`:''}</div>`:''}
+  <label for="summary">Executive summary</label>
+  <div class="ai"><button class="btn primary" data-draft="summary">Draft from fields</button><button class="btn" data-ai="summary">Improve with AI</button><button class="btn" data-paste="summary">Paste AI draft</button></div>
+  <textarea id="summary" data-p="summary" style="min-height:190px">${esc(S.summary)}</textarea>
+  ${st==='draft'?`<div class="row" style="margin-top:18px"><button class="btn" data-allow id="btnPdf2">Create draft PDF</button><button class="btn dark" id="btnIssue" ${blocks.length?'disabled':''}>Issue report and save</button></div>
+  <p class="note" style="margin-top:10px">Issuing locks Rev ${esc(S.job.rev)}, then opens the share sheet with the PDF, the job file and the register. Choose your "Save GPR to iCloud" shortcut there. Draft PDFs carry a DRAFT watermark.</p>`:''}`;
+}
+function viewSettings(){
+  const d=settings.device;
+  return `<h1>Company and iPad settings</h1><p class="lead">Defaults used on every new report. Stored on this iPad only.</p>
+  <h2>This iPad</h2>
+  <div class="grid">${fld('settings.device.name','iPad name',{ph:'iPad 1',hint:'used in the register file name'})}${fld('settings.device.prefix','Report number prefix',{ph:'MHS'})}
+  ${fld('settings.device.from','Number block from',{mode:'numeric'})}${fld('settings.device.to','Number block to',{mode:'numeric'})}
+  ${fld('settings.device.next','Next number',{mode:'numeric',hint:'next report: '+esc(fmtNo(peekNumber()))})}<div></div></div>
+  <p class="note">Give each iPad its own block so two iPads can never issue the same number. For example iPad 1: 200 to 399, iPad 2: 400 to 599, iPad 3: 600 to 799. Numbers restart from the start of the block each January.</p>
+  <h2>Company</h2>
+  <div class="grid">${fld('settings.company.name','Company name',{full:true})}${fld('settings.company.address','Address')}${fld('settings.company.website','Website')}
+  ${fld('settings.company.preparedBy','Prepared by')}${fld('settings.company.reviewedBy','Reviewed by')}${fld('settings.company.approvedBy','Approved by')}<div></div>
+  ${imgBox('settings.company.logo','Company logo','Tap to add a logo (shown on the cover)',{full:true,max:600})}
+  ${fld('settings.company.methodology','Standard methodology text',{full:true,area:true,rows:7})}
+  ${fld('settings.company.limitations','Standard limitations text',{full:true,area:true,rows:7})}
+  <h2 class="full" style="margin:10px 0 0">AI drafting through Shortcuts</h2>
+  ${fld('settings.shortcut','Shortcut name',{full:true,hint:'must match the name in the Shortcuts app exactly'})}</div>
+  <p class="note">The app works fully offline and has no running costs. Improve with AI hands text to the Shortcuts app, which uses the model you choose there. Client names are not sent. Version ${APP_VERSION}.</p>`;
 }
 function renderView(){
-  const el=document.getElementById('view'); let h='';
-  if(view==='job'){
-    h=`<h1>Job details</h1><p class="lead">Cover page and document control. Names default from company settings.</p>
-    <div class="grid">${fld('job.reportNo','Report no.',{ph:'MHS-206-2026'})}${fld('job.rev','Revision',{mode:'numeric'})}
-    ${fld('job.project','Project',{full:true,ph:'Coring in LG floor plant room for tank separation'})}
-    ${fld('job.location','Site location',{ph:'Jumeirah Village, Dubai'})}${fld('job.client','Client')}
-    ${fld('job.clientRef','Client reference',{hint:'optional'})}${fld('job.scanDate','Date of scanning',{type:'date'})}
-    ${fld('job.date','Date of issue',{type:'date'})}<div></div>
-    ${fld('job.preparedBy','Prepared by')}${fld('job.reviewedBy','Reviewed by')}${fld('job.approvedBy','Approved by')}${fld('job.revNotes','Revision notes',{hint:'optional'})}
-    ${fld('job.scope','Introduction and scope',{full:true,area:true,ph:'MHS+ was appointed by the client to locate reinforcement and embedded services at the locations shown, prior to coring...'})}
-    <div class="full">${imgBox('job.siteMap','Site location map or scan area plan','Tap to add a map or plan')}</div></div>`;
-  } else if(view==='instrument'){
-    h=`<h1>Equipment and calibration</h1><p class="lead">Carried into every new job from company settings. Update the certificate when the instrument is recalibrated.</p>
-    <div class="grid">${fld('instrument.model','Instrument')}${fld('instrument.serial','Serial number')}${fld('instrument.antenna','Antenna / frequency',{full:true})}
-    ${fld('instrument.calBy','Calibrated by',{full:true})}${fld('instrument.certNo','Certificate no.')}${fld('instrument.calDate','Calibration date',{type:'date'})}${fld('instrument.calDue','Valid until',{type:'date'})}<div></div>
-    <div class="full">${imgBox('instrument.certImage','Calibration certificate','Tap to add a photo or scan of the certificate')}</div></div>
-    <div class="row" style="margin-top:14px"><button class="btn" id="instrDefault">Save as company default</button></div>`;
-  } else if(view==='photos'){
-    h=`<h1>Site images</h1><p class="lead">General site photos. Location photos and scan images go on each location page.</p>
-    <div class="photos">${S.job.photos.map((p,i)=>`<div><div class="img"><img src="${p.src}" alt="Site photo ${i+1}"><button class="x" data-delphoto="${i}">Remove</button></div><input style="margin-top:8px" data-p="job.photos.${i}.caption" placeholder="Caption" value="${esc(p.caption)}"></div>`).join('')}
-    <div><div class="img"><div class="ph">Tap to add photos</div><input type="file" accept="image/*" multiple id="addPhotos" aria-label="Add site photos"></div></div></div>`;
-  } else if(view.startsWith('loc:')){
-    const L=locByUid(view.slice(4)); const i=S.locations.indexOf(L); const p=`locations.${i}`;
-    const vel=gprVelocity(L.er);
-    h=`<h1>${esc(L.id||'Location')}</h1><p class="lead">Enter what you measured and concluded on site. The result text is drafted from these fields.</p>
-    <div class="grid">${fld(p+'.id','Location ID')}${fld(p+'.scanType','Scan type and area',{ph:'C-scan grid, 600 x 600 mm'})}
-    ${fld(p+'.description','Description',{full:true,ph:'LG plant room, proposed 150 mm core'})}
-    <h2 class="full" style="margin:10px 0 0">Measurements</h2>
-    ${fld(p+'.er','Dielectric constant (εr)',{mode:'decimal',ph:'7.0',after:`<span class="readout" id="velOut">${vel?`v = ${vel.toFixed(3)} m/ns`:'Enter εr to see wave velocity'}</span>`})}
-    ${fld(p+'.erMethod','Velocity method',{ph:'Hyperbola fit'})}
-    ${fld(p+'.orientation','Top reinforcement',{ph:'Two-way mesh'})}${fld(p+'.spacing','Top bar spacing',{ph:'150 mm'})}
-    ${fld(p+'.cover','Concrete cover',{ph:'40 to 48 mm'})}${fld(p+'.bottom','Bottom reinforcement',{hint:'if detected'})}
-    ${fld(p+'.targets','Other targets and depth',{ph:'Metallic conduit at approx. 110 mm, running N-S'})}${fld(p+'.thickness','Slab thickness',{hint:'if detected'})}
-    ${fld(p+'.anomalies','Anomalies',{full:true,ph:'None observed'})}
-    <h2 class="full" style="margin:10px 0 0">Images</h2>
-    ${imgBox(p+'.photo','Marked-up site photo','Tap to take or choose a photo')}${imgBox(p+'.scan','GPR scan image','Tap to add the GP8000 screenshot')}
-    <h2 class="full" style="margin:10px 0 0">Engineer's decision</h2>
-    <div class="full"><div class="seg" role="group" aria-label="Status">${Object.entries(STATUS_LABEL).map(([k,t])=>`<button class="${k} ${L.status===k?'on':''}" data-status="${k}" aria-pressed="${L.status===k}">${t}</button>`).join('')}</div></div>
-    ${fld(p+'.conclusion',"Engineer's conclusion",{full:true,area:true,rows:3,ph:'Core feasible at marked position, clear of bars and conduit.'})}
-    <div class="full"><label for="${p}.result">Result text <span class="hint">appears in the report</span></label>
-    <div class="ai"><button class="btn primary" data-draft="${L.uid}">Draft from fields</button><button class="btn" data-ai="${L.uid}">Improve with AI</button><button class="btn" data-paste="${L.uid}">Paste AI draft</button></div><p class="note" style="margin:0 0 8px">Draft from fields works offline. Improve with AI runs your "${esc(settings.shortcut)}" shortcut, then return here and tap Paste AI draft.</p>
-    <textarea id="${p}.result" data-p="${p}.result" style="min-height:170px">${esc(L.result)}</textarea></div></div>
-    <div class="row" style="margin-top:22px"><button class="btn" data-dup="${L.uid}">Duplicate location</button><button class="btn danger" data-del="${L.uid}">Delete location</button></div>`;
-  } else if(view==='summary'){
-    const issues=checkJob();
-    h=`<h1>Summary and checks</h1><p class="lead">Review the gaps below, draft the summary, then create the PDF.</p>
-    <div class="checks ${issues.length?'':'ok'}"><strong>${issues.length?issues.length+' item'+(issues.length>1?'s':'')+' to review':'Ready to issue'}</strong>${issues.length?`<ul>${issues.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>
-    <label for="summary">Executive summary</label>
-    <div class="ai"><button class="btn primary" data-draft="summary">Draft from fields</button><button class="btn" data-ai="summary">Improve with AI</button><button class="btn" data-paste="summary">Paste AI draft</button></div>
-    <textarea id="summary" data-p="summary" style="min-height:190px">${esc(S.summary)}</textarea>
-    <div class="row" style="margin-top:18px"><button class="btn dark" id="btnPdf2">Create PDF</button></div>`;
-  } else if(view==='files'){
-    h=`<h1>Job files</h1><p class="lead">The current job saves automatically on this iPad. Save a job file to keep a copy in Files, share it with the team, or reopen it later.</p>
-    <div class="row"><button class="btn dark" id="exportJob">Save job file</button>
-    <label class="btn" style="margin:0;display:inline-flex;align-items:center">Open job file<input type="file" accept=".json,application/json" id="importJob" hidden></label>
-    <button class="btn" id="newJob">Start new job</button><button class="btn" id="sampleJob">Load sample job</button></div>
-    <p class="note" style="margin-top:14px">Starting a new job clears the current one from this iPad. Save a job file first if you need it.</p>`;
-  } else if(view==='settings'){
-    h=`<h1>Company settings</h1><p class="lead">Defaults used on every new report. Stored on this iPad only.</p>
-    <div class="grid">${fld('settings.company.name','Company name',{full:true})}${fld('settings.company.address','Address')}${fld('settings.company.website','Website')}
-    ${fld('settings.company.preparedBy','Prepared by')}${fld('settings.company.reviewedBy','Reviewed by')}${fld('settings.company.approvedBy','Approved by')}<div></div>
-    <div class="full">${imgBox('settings.company.logo','Company logo','Tap to add a logo (shown on the cover)')}</div>
-    ${fld('settings.company.methodology','Standard methodology text',{full:true,area:true,rows:7})}
-    ${fld('settings.company.limitations','Standard limitations text',{full:true,area:true,rows:7})}
-    <h2 class="full" style="margin:10px 0 0">AI drafting through Shortcuts</h2>
-    ${fld('settings.shortcut','Shortcut name',{full:true,hint:'must match the name in the Shortcuts app exactly'})}
-    </div>
-    <p class="note">The app works fully offline and has no running costs. "Improve with AI" hands the text to the Shortcuts app, which uses the model you choose there. Client names are not sent.</p>`;
+  const el=document.getElementById('view');
+  const V={register:viewRegister,job:viewJob,defaults:viewDefaults,instrument:viewInstrument,photos:viewPhotos,table:viewTable,bulk:viewBulk,summary:viewSummary,settings:viewSettings};
+  el.innerHTML = view.startsWith('loc:') ? viewLocation() : (V[view]||viewJob)();
+  if(locked() && !['register','settings','summary'].includes(view)){
+    el.insertAdjacentHTML('afterbegin',`<div class="banner ${S.meta.status==='superseded'?'warn':''}"><span class="grow"><strong>${REG_LABEL[S.meta.status]}: read only.</strong> Rev ${esc(S.job.rev)} is locked. Create a new revision on the Summary page to make changes.</span></div>`);
   }
-  el.innerHTML=h; renderNav();
+  if(locked() && !['register','settings'].includes(view)) el.querySelectorAll('input,textarea,select,button:not([data-allow])').forEach(x=>{ if(!x.closest('.banner')) x.disabled=true; });
+  renderNav();
 }
-function render(){ renderNav(); renderView(); document.querySelector('main').scrollTop=0; }
+function render(){ renderView(); document.querySelector('main').scrollTop=0; }
 
 /* ================= Checks ================= */
 function checkJob(){
-  const x=[], J=S.job;
-  if(!J.reportNo) x.push('Report number is missing'); if(!J.project) x.push('Project is missing'); if(!J.client) x.push('Client is missing');
-  if(!J.scope) x.push('Introduction and scope is empty');
-  if(!S.instrument.certNo || !S.instrument.calDue) x.push('Calibration certificate number or validity date is missing');
-  else if(S.instrument.calDue < (J.scanDate||today())) x.push('Calibration had expired on the scan date');
-  S.locations.forEach((L,i)=>{ const n=L.id||'Location '+(i+1);
-    if(!L.er) x.push(`${n}: dielectric constant not recorded (depths cannot be verified)`);
-    if(!L.status) x.push(`${n}: engineer's decision not set`);
-    if(!L.result) x.push(`${n}: result text is empty`);
-    if(!L.scan) x.push(`${n}: no GPR scan image`);
-    if(!L.photo) x.push(`${n}: no marked-up site photo`);
+  const out=[], J=S.job, I=S.instrument, flagged=new Set();
+  const B=t=>out.push({sev:'block',text:t}), W=(t,ack)=>out.push({sev:'warn',text:t,ack});
+  if(!T(J.reportNo)) B('Report number is missing');
+  else if(REG.some(r=>r.id!==S.id&&r.reportNo===T(J.reportNo)&&r.rev===T(J.rev))) B(`${J.reportNo} Rev ${J.rev} already exists in the register`);
+  if(!T(J.project)) B('Project is missing'); if(!T(J.client)) B('Client is missing');
+  if(!T(J.scope)) W('Introduction and scope is empty');
+  if(T(J.rev)!=='0' && !T(J.revNotes)) W('Revision notes are empty for a revised report');
+  if(!T(I.serial)) B('Instrument serial number is missing');
+  if(!T(I.certNo)||!I.calDue) B('Calibration certificate number or validity date is missing');
+  else if(I.calDue < (J.scanDate||today())) B('Calibration had expired on the scan date');
+  if(!T(I.certSerial)) W('Serial number on the certificate is not entered, so it cannot be cross-checked');
+  else if(T(I.serial) && normSerial(I.serial)!==normSerial(I.certSerial)) B(`Serial number mismatch: instrument ${I.serial}, certificate ${I.certSerial}`);
+  const G=new Map(); const add=(sev,key,L)=>{ const g=G.get(key)||{sev,ids:[]}; g.ids.push(T(L.id)||'?'); G.set(key,g); flagged.add(L.uid); };
+  const ids=new Map(); S.locations.forEach(L=>{ const k=T(L.id); ids.set(k,(ids.get(k)||0)+1); });
+  S.locations.forEach(L=>{
+    if(!T(L.id)) add('block','location ID is missing',L); else if(ids.get(T(L.id))>1) add('block','location ID used more than once',L);
+    if(!L.status) add('block',"engineer's decision not set",L);
+    if(!T(L.result)) add('block','result text is empty',L);
+    if(/\[ENGINEER TO CONFIRM/.test(L.result+' '+L.conclusion)) add('block','"engineer to confirm" marker still in the text',L);
+    if(L.dupOf) add('block','copied from another location and not yet edited or confirmed',L);
+    if(!T(L.er)) add('block','dielectric constant not recorded',L);
+    else { const e=parseFloat(L.er); if(!(e>=3.5&&e<=15)) add('warn','εr outside the usual range for concrete (3.5 to 15)',L); else if(!L.erChecked) add('warn','εr not confirmed against the GP8000 screen',L); }
+    if(!L.scan) add('warn','no GPR scan image',L);
+    if(!L.photo) add('warn','no marked-up site photo',L);
+    if(!T(L.spacing)) add('warn','top bar spacing not recorded',L);
+    if(L.status==='clear' && T(L.targets) && !isNone(L.targets) && !/offset|clear of|away from|outside|from (the )?core|\b(north|south|east|west)\b|\bmm (from|of)\b/i.test(L.conclusion))
+      add('warn','clear to proceed with other targets recorded; state the distance of the target from the core in the conclusion',L);
   });
-  if(!S.summary) x.push('Executive summary is empty');
-  return x;
+  for(const [key,g] of G) (g.sev==='block'?B:W)(`${listIds(g.ids)}: ${key}`);
+  const sig=new Map(); S.locations.forEach(L=>{ if(L.sameOk||!T(L.result)) return; const k=JSON.stringify(['spacing','cover','bottom','targets','thickness','anomalies','er','result'].map(f=>T(L[f]).toLowerCase())); (sig.get(k)||sig.set(k,[]).get(k)).push(L); });
+  const same=[...sig.values()].filter(g=>g.length>1); same.flat().forEach(L=>flagged.add(L.uid));
+  if(same.length>3) W(`${same.flat().length} locations share identical findings and result text with at least one other location (${listIds(same.flat().map(L=>T(L.id)))}). Use the Flagged filter in the table to check them.`, same.flat().map(L=>L.uid).join(','));
+  else same.forEach(grp=>W(`${listIds(grp.map(L=>T(L.id)))} have identical findings and result text. Confirm each was measured at its own location.`, grp.map(L=>L.uid).join(',')));
+  if(!T(S.summary)) B('Executive summary is empty');
+  else if(/\[ENGINEER TO CONFIRM/.test(S.summary)) B('Executive summary still contains an "engineer to confirm" marker');
+  out.flagged=flagged; return out;
 }
 
-/* ================= Offline drafting (no API, no cost) ================= */
-const T = x => String(x??'').trim();
+/* ================= Offline drafting ================= */
 const lc = x => { x=T(x); return /^[A-Z]{2}/.test(x)||/^[A-Z]-?\d/.test(x) ? x : x.charAt(0).toLowerCase()+x.slice(1); };
 const dot = x => { x=T(x); return x && !/[.!?]$/.test(x) ? x+'.' : x; };
-const isNone = x => /^(none|nil|no|n\/a|na|-|not (observed|detected|resolved|found))\b/i.test(T(x));
 const ask = what => `[ENGINEER TO CONFIRM: ${what}]`;
 function draftLocation(L){
   const out=[]; const where=T(L.description)?` at ${lc(L.description).replace(/\.$/,'')}`:'';
-  out.push(`GPR scanning was carried out${where}${T(L.scanType)?`, using a ${T(L.scanType).replace(/\.$/,'')}`:''}.`);
+  out.push(`GPR scanning was carried out${where}${T(L.scanType)?`, using a ${lc(L.scanType).replace(/\.$/,'')}`:''}.`);
   if(T(L.spacing)||T(L.cover)||T(L.orientation)){
     let t=`Top reinforcement${T(L.orientation)?` (${lc(L.orientation)})`:''} was detected`;
     t+= T(L.spacing)?` at approximately ${T(L.spacing)} centres`:` (spacing ${ask('bar spacing')})`;
     t+= T(L.cover)?`, with concrete cover of ${T(L.cover)}.`:`, with concrete cover of ${ask('cover depth')}.`;
     out.push(t);
   } else out.push(`Top reinforcement: ${ask('orientation, spacing and cover')}.`);
-  if(T(L.bottom)) out.push(isNone(L.bottom)?'Bottom reinforcement was not resolved.':`Bottom reinforcement was detected (${lc(L.bottom)}).`);
+  if(T(L.bottom)) out.push(isNone(L.bottom)?'Bottom reinforcement was not resolved.':`Bottom reinforcement was detected at ${lc(L.bottom).replace(/\.$/,'')}.`);
   if(T(L.targets)) out.push(isNone(L.targets)?'No other embedded targets were detected.':`An additional target was identified: ${lc(dot(L.targets))}`);
-  if(T(L.thickness)) out.push(`The slab underside was observed at ${lc(L.thickness)}.`);
+  if(T(L.thickness)) out.push(`The slab underside was observed at ${lc(L.thickness).replace(/\.$/,'')}.`);
   const v=gprVelocity(L.er);
   out.push(v?`Depths are based on a dielectric constant of ${T(L.er)} (wave velocity ${v.toFixed(3)} m/ns)${T(L.erMethod)?`, determined by ${lc(L.erMethod)}`:''}.`
             :`Depths are based on a dielectric constant of ${ask('εr and calibration method')}.`);
   if(T(L.anomalies)) out.push(isNone(L.anomalies)?'No anomalies were observed.':`Anomalies noted: ${lc(dot(L.anomalies))}`);
-  if(T(L.conclusion)) out.push(dot(L.conclusion));
-  else out.push({clear:'The location is considered clear to proceed at the marked position.',restricted:`Works may proceed subject to the following restrictions: ${ask('restrictions')}.`,notfeasible:'Works are not considered feasible at the marked position.'}[L.status]||`Conclusion: ${ask("engineer's decision")}.`);
+  if(!T(L.conclusion)) out.push({clear:'The location is considered clear to proceed at the marked position.',restricted:`Works may proceed subject to the following restrictions: ${ask('restrictions')}.`,notfeasible:'Works are not considered feasible at the marked position.'}[L.status]||`Conclusion: ${ask("engineer's decision")}.`);
   return out.join(' ');
 }
 function draftSummary(){
   const Ls=S.locations, n=Ls.length, id=(L,i)=>T(L.id)||'Location '+(i+1);
   const out=[`GPR scanning was carried out at ${n} location${n>1?'s':''}${T(S.job.project)?` for ${lc(S.job.project)}`:''}${T(S.job.location)?` at ${T(S.job.location)}`:''} to locate reinforcement and embedded services.`];
   const groups={clear:[],restricted:[],notfeasible:[],'':[]}; Ls.forEach((L,i)=>groups[L.status||''].push(id(L,i)));
-  const say=(arr,txt)=>arr.length&&out.push(`${arr.join(', ')} ${arr.length>1?'were':'was'} assessed as ${txt}.`);
+  const names=a=>a.length>10?`${a.length} locations (listed in the summary table)`:a.join(', ');
+  const say=(arr,txt)=>arr.length&&out.push(`${names(arr)} ${arr.length>1?'were':'was'} assessed as ${txt}.`);
   say(groups.clear,'clear to proceed at the marked position'+(groups.clear.length>1?'s':''));
   say(groups.restricted,'able to proceed subject to restrictions');
   say(groups.notfeasible,'not feasible at the marked position'+(groups.notfeasible.length>1?'s':''));
-  if(groups[''].length) out.push(`The decision for ${groups[''].join(', ')} is ${ask('status')}.`);
+  if(groups[''].length) out.push(`The decision for ${names(groups[''])} is ${ask('status')}.`);
   const tg=Ls.map((L,i)=>T(L.targets)&&!isNone(L.targets)?`${lc(T(L.targets).replace(/\.$/,''))} (${id(L,i)})`:'').filter(Boolean);
-  if(tg.length) out.push(`Embedded services identified include ${tg.join('; ')}.`);
+  if(tg.length>6) out.push(`Embedded services other than reinforcement were identified at ${tg.length} locations; details are given on each location page.`);
+  else if(tg.length) out.push(`Embedded services identified include ${tg.join('; ')}.`);
   out.push('Detailed findings are given on each location page. Readers should refer to the limitations section of this report.');
   return out.join(' ');
 }
@@ -288,19 +556,21 @@ function draft(target){
   else { const L=locByUid(target); L.result=draftLocation(L); save(); const ta=document.querySelector(`[data-p="locations.${S.locations.indexOf(L)}.result"]`); if(ta) ta.value=L.result; }
   toast('Draft ready. Review and edit before issuing.');
 }
-
 const RULES = `You are editing text for a GPR (ground penetrating radar) concrete scanning report by MHS+ Project Management Services, Dubai.
 Rules: use ONLY the facts given below. Never add or change measurements, depths, targets or conclusions. Keep every [ENGINEER TO CONFIRM: ...] marker exactly as written. Formal, concise British engineering English, past tense, mm for dimensions. Return ONLY the finished paragraph: no heading, no bullets, no preamble, no quotation marks.`;
+function locFactsLite(L){ const v=gprVelocity(L.er); const o={location:L.id,description:L.description,scan:L.scanType,dielectric:L.er,velocity:v?v.toFixed(3)+' m/ns':'',velocity_method:L.erMethod,top_reinforcement:L.orientation,spacing:L.spacing,cover:L.cover,bottom_reinforcement:L.bottom,other_targets:L.targets,slab_thickness:L.thickness,anomalies:L.anomalies,decision:STATUS_LABEL[L.status]||'not set',engineer_conclusion:L.conclusion};
+  Object.keys(o).forEach(k=>{ if(!T(o[k])) delete o[k]; }); return o; }
 function aiPrompt(t){
   if(t==='summary'){
-    const facts=S.locations.map(L=>({...locFactsLite(L)}));
-    return `${RULES}\n\nTask: improve this executive summary (80 to 160 words).\n\nPROJECT: ${T(S.job.project)}\nSITE: ${T(S.job.location)}\nLOCATION FINDINGS: ${JSON.stringify(facts)}\n\nSTARTING DRAFT:\n${T(S.summary)||draftSummary()}`;
+    const Ls=S.locations; let facts;
+    if(Ls.length<=15) facts=JSON.stringify(Ls.map(locFactsLite));
+    else { const c=k=>Ls.filter(L=>L.status===k).length; facts=JSON.stringify({total_locations:Ls.length,clear:c('clear'),with_restrictions:c('restricted'),not_feasible:c('notfeasible'),
+      locations_with_other_targets:Ls.filter(L=>T(L.targets)&&!isNone(L.targets)).slice(0,20).map(L=>`${L.id}: ${T(L.targets)}`)}); }
+    return `${RULES}\n\nTask: improve this executive summary (80 to 160 words).\n\nPROJECT: ${T(S.job.project)}\nSITE: ${T(S.job.location)}\nFINDINGS: ${facts}\n\nSTARTING DRAFT:\n${T(S.summary)||draftSummary()}`;
   }
   const L=locByUid(t);
   return `${RULES}\n\nTask: improve this location result paragraph (60 to 130 words).\n\nFACTS: ${JSON.stringify(locFactsLite(L))}\n\nSTARTING DRAFT:\n${T(L.result)||draftLocation(L)}`;
 }
-function locFactsLite(L){ const v=gprVelocity(L.er); const o={location:L.id,description:L.description,scan:L.scanType,dielectric:L.er,velocity:v?v.toFixed(3)+' m/ns':'',velocity_method:L.erMethod,top_reinforcement:L.orientation,spacing:L.spacing,cover:L.cover,bottom_reinforcement:L.bottom,other_targets:L.targets,slab_thickness:L.thickness,anomalies:L.anomalies,decision:STATUS_LABEL[L.status]||'not set',engineer_conclusion:L.conclusion};
-  Object.keys(o).forEach(k=>{ if(!T(o[k])) delete o[k]; }); return o; }
 async function sendToShortcut(t){
   const prompt=aiPrompt(t); lastPrompt=prompt;
   try{ await navigator.clipboard.writeText(prompt); }catch{ return toast('Could not copy to the clipboard. Tap Improve with AI again.',4000); }
@@ -308,7 +578,7 @@ async function sendToShortcut(t){
   setTimeout(()=>{ location.href='shortcuts://run-shortcut?name='+encodeURIComponent(settings.shortcut)+'&input=clipboard'; },350);
 }
 async function pasteDraft(t){
-  let txt=''; try{ txt=(await navigator.clipboard.readText()).trim(); }catch{ return toast('Allow Paste when iPad asks, then try again.',4000); }
+  let txt=''; try{ txt=(await navigator.clipboard.readText()).trim(); }catch{ return toast('Allow Paste when the iPad asks, then try again.',4000); }
   if(!txt) return toast('The clipboard is empty. Run Improve with AI first.',4000);
   if(txt===lastPrompt.trim()||txt.startsWith('You are editing text for a GPR')) return toast('The shortcut has not replaced the clipboard yet. Check it ran, then paste again.',5000);
   txt=txt.replace(/^["“]|["”]$/g,'').trim();
@@ -318,57 +588,149 @@ async function pasteDraft(t){
   save(); const dropped=lost.filter(m=>!txt.includes(m)).length;
   toast(dropped?`AI draft pasted. Warning: ${dropped} "engineer to confirm" marker(s) were removed. Check the facts.`:'AI draft pasted. Review before issuing.',dropped?6000:3000);
 }
-const target_has_text = t => t==='summary' ? !!T(S.summary) : !!T(locByUid(t)?.result);
-/* ================= PDF ================= */
-async function makePdf(){
-  const issues=checkJob();
-  if(issues.length && !confirm(`${issues.length} item(s) still to review (see Summary and checks).\n\nCreate the PDF anyway?`)) return;
+const hasText = t => t==='summary' ? !!T(S.summary) : !!T(locByUid(t)?.result);
+
+/* ================= PDF, files and sharing ================= */
+async function pdfFile(){
+  const busy=toast('<span class="spin"></span> Building the PDF…',0); await new Promise(r=>setTimeout(r,60));
   try{
-    const doc=buildReport({...S, company:settings.company}, window.jspdf.jsPDF);
-    const name=`${(S.job.reportNo||'GPR-Report').replace(/[^\w.-]+/g,'_')}_Rev${S.job.rev||0}.pdf`;
-    const blob=doc.output('blob'); const file=new File([blob],name,{type:'application/pdf'});
-    if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:name}); return; }catch(e){ if(e.name==='AbortError') return; } }
-    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
-    toast('PDF created: '+name);
-  }catch(e){ console.error(e); toast('PDF could not be created: '+e.message,5000); }
+    let st=inlineImages(S);
+    if(S.layout==='compact'){
+      const cache=new Map(); const sh=async s=>{ if(!s||!s.startsWith('data:image')) return s; if(!cache.has(s)) cache.set(s,await shrink(s,1100,0.72)); return cache.get(s); };
+      for(const L of st.locations){ L.photo=await sh(L.photo); L.scan=await sh(L.scan); }
+      for(const p of st.job.photos) p.src=await sh(p.src);
+    }
+    const doc=buildReport({...st,company:settings.company}, window.jspdf.jsPDF, {layout:S.layout, draft:S.meta.status==='draft'});
+    const name=`${fileBase()}${S.meta.status==='draft'?'_DRAFT':''}.pdf`;
+    return new File([doc.output('blob')],name,{type:'application/pdf'});
+  } finally { busy.remove(); }
+}
+function csvCell(x){ x=String(x??''); return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x; }
+function registerFile(){
+  const cols=['Report no.','Rev','Status','Issued','Client','Project','Site','Scan date','Locations','iPad'];
+  const rows=[...REG].sort((a,b)=>(a.reportNo+a.rev).localeCompare(b.reportNo+b.rev,undefined,{numeric:true}))
+    .map(r=>[r.reportNo,r.rev,REG_LABEL[r.status],(r.issuedAt||'').slice(0,10),r.client,r.project,r.location,r.scanDate,r.n,r.device].map(csvCell).join(','));
+  return new File(['\ufeff'+[cols.join(','),...rows].join('\r\n')],`MHS_GPR_Register_${T(settings.device.name).replace(/\W+/g,'_')||'iPad'}.csv`,{type:'text/csv'});
+}
+const jobFile = () => new File([JSON.stringify(inlineImages(S))],`${fileBase()}_job.json`,{type:'application/json'});
+function download(f){ const u=URL.createObjectURL(f); const a=document.createElement('a'); a.href=u; a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000); }
+async function shareFiles(files,title){
+  if(navigator.canShare && navigator.canShare({files})){
+    try{ await navigator.share({files,title}); return; }
+    catch(e){ if(e.name==='AbortError') return; if(e.name==='NotAllowedError') return readyBar(files,title); console.warn(e); }
+  }
+  files.forEach(download); toast(`${files.length>1?files.length+' files':files[0].name} saved to Downloads`);
+}
+function readyBar(files,title){
+  document.querySelectorAll('.readybar').forEach(x=>x.remove());
+  const b=document.createElement('div'); b.className='readybar'; b.setAttribute('role','status');
+  b.innerHTML=`<span>${esc(title)} is ready</span><button class="btn primary" id="rbShare">Save or share</button><button class="btn ghost" id="rbClose">Close</button>`;
+  document.body.appendChild(b);
+  b.querySelector('#rbShare').onclick=async()=>{ try{ await navigator.share({files,title}); }catch(e){ if(e.name!=='AbortError') files.forEach(download); } b.remove(); };
+  b.querySelector('#rbClose').onclick=()=>b.remove();
+}
+async function makePdf(){
+  const items=checkJob().filter(x=>x.sev==='block');
+  if(S.meta.status==='draft' && items.length && !confirm(`${items.length} blocking item(s) are still open (see Summary, checks and issue).\n\nCreate a DRAFT PDF anyway?`)) return;
+  try{ const f=await pdfFile(); await shareFiles([f], f.name); }catch(e){ console.error(e); toast('PDF could not be created: '+esc(e.message),5000); }
+}
+async function issueReport(){
+  const items=checkJob(); if(items.some(x=>x.sev==='block')) return toast('Fix the blocking items first.');
+  const w=items.filter(x=>x.sev==='warn').length;
+  if(!confirm(`${w?`${w} item(s) to review are still listed.\n\n`:''}Issue ${S.job.reportNo} Rev ${S.job.rev}? It will be locked. Later changes need a new revision.`)) return;
+  S.meta.status='issued'; S.meta.issuedAt=new Date().toISOString(); if(!S.job.date) S.job.date=today();
+  await save(true);
+  if(S.meta.supersedes){ const old=await dbGet('job:'+S.meta.supersedes); if(old){ old.meta.status='superseded'; await dbSet('job:'+old.id,old); upsertReg(normalise(old)); await dbSet('register',REG); } }
+  render(); await shareIssued();
+}
+async function shareIssued(){
+  try{ const files=[await pdfFile(), jobFile(), registerFile()]; await shareFiles(files, `${S.job.reportNo} Rev ${S.job.rev}`); }
+  catch(e){ console.error(e); toast('Files could not be created: '+esc(e.message),5000); }
 }
 
 /* ================= Events ================= */
-document.addEventListener('input',e=>{ const p=e.target.dataset.p; if(!p) return; set(p,e.target.value);
-  if(/\.er$/.test(p)){ const v=gprVelocity(e.target.value); const o=document.getElementById('velOut'); if(o) o.textContent=v?`v = ${v.toFixed(3)} m/ns (1 ns two-way = ${(v*500).toFixed(0)} mm depth)`:'Enter εr to see wave velocity'; }
-  if(/^job\.(reportNo|rev)$|^locations\.\d+\.(id|spacing|cover|description)$/.test(p)) renderNav(); });
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='regSearch'){ REGQ=t.value; document.getElementById('regBody').innerHTML=regRows(); return; }
+  if(t.id==='bulkPrefix'||t.id==='bulkStart'){ BULK[t.id==='bulkPrefix'?'prefix':'start']=t.value; document.getElementById('bulkPrev').innerHTML=bulkPreview(); return; }
+  const p=t.dataset.p; if(!p) return; set(p,t.value);
+  if(/\.er$/.test(p)){ const v=gprVelocity(t.value); const o=document.getElementById('velOut'); if(o) o.textContent=v?`v = ${v.toFixed(3)} m/ns (1 ns two-way = ${(v*500).toFixed(0)} mm depth)`:'Enter εr to see wave velocity';
+    const c=document.querySelector(`[data-chk="${p}Checked"]`); if(c) c.checked=!!T(t.value); }
+  if(/^job\.(reportNo|rev)$|^locations\.\d+\.(id|spacing|cover|description|status)$/.test(p)) renderNav();
+});
 document.addEventListener('change',async e=>{
   const t=e.target;
-  if(t.dataset.img && t.files[0]){ try{ set(t.dataset.img, await resizeImage(t.files[0])); renderView(); }catch{ toast('That image could not be read.'); } }
-  if(t.id==='addPhotos'){ for(const f of t.files){ try{ S.job.photos.push({src:await resizeImage(f),caption:''}); }catch{} } save(); renderView(); }
-  if(t.id==='importJob' && t.files[0]){ try{ const d=JSON.parse(await t.files[0].text()); if(!d.job||!d.locations) throw 0; S=d; save(); view='job'; render(); toast('Job opened'); }catch{ toast('That file is not an MHS+ GPR job file.'); } }
+  if(t.dataset.chk){ if(locked()) return; const ks=t.dataset.chk.split('.'); const last=ks.pop(); ks.reduce((o,k)=>o[k],S)[last]=t.checked; save(); return; }
+  if(t.dataset.img && t.files[0]){ try{ const d=await resizeImage(t.files[0],+t.dataset.max||1600); set(t.dataset.img, t.dataset.img.startsWith('settings.')?d:await putImage(d)); renderView(); }catch{ toast('That image could not be read.'); } }
+  if(t.id==='addPhotos'){ for(const f of t.files){ try{ S.job.photos.push({src:await putImage(await resizeImage(f,1400)),caption:''}); }catch{} } save(); renderView(); }
+  if(t.id==='importJob' && t.files[0]){ try{ const d=JSON.parse(await t.files[0].text()); if(!d.job||!d.locations) throw 0;
+      await addJob(d); const dup=REG.filter(r=>r.id!==S.id&&r.reportNo===T(S.job.reportNo)&&r.rev===T(S.job.rev)).length;
+      toast(dup?'Job opened. Note: the same report number and revision already exist on this iPad.':'Job opened',dup?6000:2600); }catch(err){ console.error(err); toast('That file is not an MHS+ GPR job file.'); } }
+  if(t.id==='bulkScans'){ BULK.scans=[...t.files]; renderView(); }
+  if(t.id==='bulkPhotos'){ BULK.photos=[...t.files]; renderView(); }
+  if(t.id==='bulkSort'){ BULK.sort=t.checked; document.getElementById('bulkPrev').innerHTML=bulkPreview(); }
 });
 document.addEventListener('click',async e=>{
-  const b=e.target.closest('button,[data-go]'); if(!b) return;
+  const b=e.target.closest('button'); if(!b||b.disabled) return;
   if(b.dataset.go){ view=b.dataset.go; render(); return; }
-  if(b.id==='addLoc'){ const L=newLoc(S.locations.length+1); S.locations.push(L); save(); view='loc:'+L.uid; render(); return; }
+  if(b.dataset.open){ openJob(b.dataset.open); return; }
+  if(b.dataset.deljob){ deleteJob(b.dataset.deljob); return; }
+  if(b.dataset.filter){ TABLEF=b.dataset.filter; renderView(); return; }
+  if(b.dataset.layout){ if(locked()) return; S.layout=b.dataset.layout; save(); renderView(); return; }
+  if(b.dataset.ack){ b.dataset.ack.split(',').forEach(u=>{ const L=locByUid(u); if(L) L.sameOk=true; }); save(); renderView(); return; }
+  if(b.dataset.samedup){ const L=locByUid(b.dataset.samedup); L.dupOf=''; L.sameOk=true; save(); renderView(); return; }
+  if(b.id==='btnPdf'||b.id==='btnPdf2'){ makePdf(); return; }
+  if(b.id==='btnIssue'){ issueReport(); return; }
+  if(b.id==='btnReshare'){ shareIssued(); return; }
+  if(b.id==='btnNewRev'){ newRevision(); return; }
+  if(b.id==='newJob'){ createJob(); return; }
+  if(b.id==='exportReg'){ shareFiles([registerFile()],'Register'); return; }
+  if(b.id==='sampleJob'){ try{ const d=await (await fetch('sample.json')).json(); await addJob(d); toast('Sample job added to the register'); }catch(err){ console.error(err); toast('Sample could not be loaded.'); } return; }
+  if(locked()) return;
+  if(b.id==='addLoc'||b.id==='addLoc2'||b.id==='addNext'){ const L=newLoc(); S.locations.push(L); save(); view='loc:'+L.uid; render(); return; }
   if(b.dataset.clear){ set(b.dataset.clear,''); renderView(); return; }
   if(b.dataset.delphoto){ S.job.photos.splice(+b.dataset.delphoto,1); save(); renderView(); return; }
   if(b.dataset.status){ const L=locByUid(view.slice(4)); L.status=L.status===b.dataset.status?'':b.dataset.status; save(); renderView(); return; }
   if(b.dataset.ai){ sendToShortcut(b.dataset.ai); return; }
   if(b.dataset.paste){ pasteDraft(b.dataset.paste); return; }
-  if(b.dataset.draft){ if(target_has_text(b.dataset.draft) && !confirm('Replace the existing text with a fresh draft?')) return; draft(b.dataset.draft); return; }
-  if(b.dataset.dup){ const L=locByUid(b.dataset.dup); const c={...L,uid:Math.random().toString(36).slice(2,9),id:'L-'+String(S.locations.length+1).padStart(2,'0'),photo:'',scan:'',result:'',status:''}; S.locations.splice(S.locations.indexOf(L)+1,0,c); save(); view='loc:'+c.uid; render(); return; }
-  if(b.dataset.del){ if(S.locations.length===1) return toast('A report needs at least one location.'); if(!confirm('Delete this location and its images?')) return; S.locations=S.locations.filter(l=>l.uid!==b.dataset.del); save(); view='job'; render(); return; }
-  if(b.id==='btnPdf'||b.id==='btnPdf2'){ makePdf(); return; }
-  if(b.id==='instrDefault'){ const {certImage,...rest}=S.instrument; settings.instrument={...rest,certImage}; saveSettings(); toast('Saved as company default'); return; }
-  if(b.id==='exportJob'){ const name=`${(S.job.reportNo||'GPR-job').replace(/[^\w.-]+/g,'_')}.json`; const blob=new Blob([JSON.stringify(S)],{type:'application/json'}); const f=new File([blob],name,{type:'application/json'});
-    if(navigator.canShare&&navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f]}); return; }catch(err){ if(err.name==='AbortError') return; } }
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); return; }
-  if(b.id==='newJob'){ if(!confirm('Start a new job? The current job will be cleared from this iPad.')) return; S=blankJob(settings.company); S.instrument={...DEFAULT_INSTR,...settings.instrument}; save(); view='job'; render(); return; }
-  if(b.id==='sampleJob'){ if(!confirm('Replace the current job with the sample?')) return; try{ S=await (await fetch('sample.json')).json(); save(); view='job'; render(); toast('Sample job loaded'); }catch{ toast('Sample could not be loaded.'); } return; }
+  if(b.dataset.draft){ if(hasText(b.dataset.draft) && !confirm('Replace the existing text with a fresh draft?')) return; draft(b.dataset.draft); return; }
+  if(b.id==='draftAll'){ let n=0,k=0; S.locations.forEach(L=>{ if(T(L.result)) k++; else { L.result=draftLocation(L); n++; } }); save(); renderView(); toast(`Drafted ${n} result${n===1?'':'s'}.${k?` ${k} already had text and were left unchanged.`:''}`,4000); return; }
+  if(b.id==='applyDefaults'){ const d=S.defaults; let n=0; S.locations.forEach(L=>['description','scanType','er','erMethod','orientation','spacing','thickness'].forEach(k=>{ if(!T(L[k])&&T(d[k])){ L[k]=d[k]; n++; if(k==='er') L.erChecked=false; } })); save(); renderView(); toast(`${n} empty field${n===1?'':'s'} filled.`); return; }
+  if(b.dataset.dup){ const L=locByUid(b.dataset.dup); const c={...L,uid:uid(),id:nextLocId(),photo:'',scan:'',result:'',status:'',erChecked:false,sameOk:false,dupOf:T(L.id)||'previous location'}; S.locations.splice(S.locations.indexOf(L)+1,0,c); save(); view='loc:'+c.uid; render(); return; }
+  if(b.dataset.del){ if(S.locations.length===1) return toast('A report needs at least one location.'); if(!confirm('Delete this location and its images?')) return; const i=S.locations.findIndex(l=>l.uid===b.dataset.del); S.locations.splice(i,1); save(); const nb=S.locations[Math.min(i,S.locations.length-1)]; view='loc:'+nb.uid; render(); return; }
+  if(b.id==='instrDefault'){ settings.instrument={...S.instrument, certImage:src(S.instrument.certImage)}; saveSettings(); toast('Saved as company default'); return; }
+  if(b.id==='bulkClear'){ BULK={scans:[],photos:[],sort:false,prefix:S.defaults.idPrefix??'',start:null}; renderView(); return; }
+  if(b.id==='bulkGo'){
+    const P=bulkPairs(); const clash=pristine()?[]:P.filter(p=>S.locations.some(L=>T(L.id)===p.id)); if(clash.length) return toast('Some IDs already exist. Change the first number.');
+    b.disabled=true; const prog=document.getElementById('bulkProg');
+    if(pristine()) S.locations=[];
+    let made=0;
+    for(const p of P){
+      prog.textContent=`Processing ${made+1} of ${P.length}…`;
+      const L=newLoc(); L.id=p.id;
+      try{ L.scan=await putImage(await resizeImage(p.scan,1600,0.85)); if(p.photo) L.photo=await putImage(await resizeImage(p.photo,1400,0.8)); }catch{ toast(`Could not read ${esc(p.scan.name)}; skipped.`); continue; }
+      S.locations.push(L); made++; if(made%10===0) save();
+    }
+    if(!S.locations.length) S.locations.push(newLoc());
+    await save(true); BULK={scans:[],photos:[],sort:false,prefix:'',start:null}; view='table'; render();
+    toast(`${made} locations added. Fill in the findings in the table.`,4000); return;
+  }
 });
 
 /* ================= Boot ================= */
 (async()=>{
-  try{ S=await dbGet('current'); }catch{}
-  if(!S){ S=blankJob(settings.company); S.instrument={...DEFAULT_INSTR,...settings.instrument}; }
-  render(); document.getElementById('saveState').textContent='Saved on this iPad';
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch{}
+  REG=(await dbGet('register'))||[];
+  let cid=await dbGet('currentId');
+  if(!REG.length){
+    const old=await dbGet('current');
+    if(old&&old.job){ const j=normalise(await externalise(old)); j.meta.device=settings.device.name; S=j; await save(true); cid=j.id; await dbDel('current'); }
+  }
+  if(cid && REG.some(r=>r.id===cid)) await openJob(cid);
+  else if(REG.length) await openJob(REG[0].id);
+  else await createJob();
+  setSave('Saved on this iPad');
+  setTimeout(gc,4000);
   if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js');
 })();
 </script>
